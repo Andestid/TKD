@@ -1,13 +1,23 @@
 const express = require("express");
 const app = express();
 
+const dotenv = require("dotenv");
+dotenv.config();
+
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+app.use(require('./utils/res.js')); // Middleware personalizado
 
-app.use(require('./routes/torneo'));
+// Importar rutas
+const deportistasRoutes = require('./routes/deportistasRoutes');
+const categoriasRoutes = require('./routes/categoriasRoutes');
 
-app.listen(process.env.PORT||3300,() => {
-    console.log("Servidor corriendo en el puerto 3300");
+// Usar rutas
+app.use(deportistasRoutes);
+app.use(categoriasRoutes);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
 
 module.exports = app;
