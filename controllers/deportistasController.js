@@ -53,8 +53,30 @@ const validacionDeportista = (id) => {
                     message: "Deportista no encontrado"
                 });
             } else {
-                const sexo = results[0].sexo;
-                resolve(sexo);
+                const deportista = results;
+                resolve(deportista);
+            }
+        });
+    });
+};
+
+const validacionCategoriaP = (id) => {
+    return new Promise((resolve, reject) => {
+        connection.query("SELECT * FROM categorias_poomsae WHERE id_categoriap = ?", [id], (error, results) => {
+            if (error) {
+                reject({
+                    statusCode: 500,
+                    message: "Error al validar categoria",
+                    error: error.message
+                });
+            } else if (results.length === 0) {
+                reject({
+                    statusCode: 404,
+                    message: "Categoria no encontrado"
+                });
+            } else {
+                const categoria = results;
+                resolve(categoria);
             }
         });
     });
@@ -84,6 +106,13 @@ const inscribirPoomsae = async (request, response) => {
     const { id_deportista, id_categoriap } = request.body;
     try {
         const deportista = await validacionDeportista(id_deportista);
+        const categoria = await validacionCategoriaP(id_categoriap);
+        if (deportista[0].sexo != categoria[0].sexo){
+            response.sendResponse({
+                statusCode: 500,
+                message: "No puede estar en esta categoria"
+            });
+        } else {
         connection.query("INSERT INTO inscritos_poomsae (id_deportista, id_categoriap) VALUES (?,?)",
             [id_deportista, id_categoriap],
             (error, results) => {
@@ -100,6 +129,7 @@ const inscribirPoomsae = async (request, response) => {
                     });
                 }
             });
+        }
     } catch (error) {
         response.sendResponse({
             statusCode: 500,
@@ -143,7 +173,6 @@ const verDeportistasPorCategoria = (request, response) => {
 module.exports = {
     getDeportistas,
     postDeportistas,
-    validacionDeportista,
     inscribirCombate,
     inscribirPoomsae,
     verDeportistasPorCategoria
