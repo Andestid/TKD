@@ -150,6 +150,7 @@ const verDeportistasPorCategoria = (request, response) => {
         SELECT d.id_deportista, d.nombre, d.apellido 
         FROM deportista AS d
         INNER JOIN inscritos_combate AS ic ON d.id_deportista = ic.id_deportista
+        INNER JOIN inscritos_poomsae AS ip ON d.id_deportista = ip.id_deportista
         WHERE ic.id_categoriac = ?;
     `;
 
