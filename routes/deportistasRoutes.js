@@ -5,7 +5,10 @@ const {
     postDeportistas,
     inscribirCombate,
     inscribirPoomsae,
-    verDeportistasPorCategoria
+    verDeportistasPorCategoria,
+    generarBrackets,
+    registrarGanador
+    
 } = require('../controllers/deportistasController');
 
 router.get('/torneo', getDeportistas);
@@ -13,5 +16,7 @@ router.post('/torneo', postDeportistas);
 router.post('/inscribircombate', inscribirCombate);
 router.post('/inscribirpoomsae', inscribirPoomsae);
 router.get('/categorias/:id_categoriac/deportistas', verDeportistasPorCategoria);
+router.post('/brackets/:id_categoriac', generarBrackets);
+router.post('/registrar_ganador', registrarGanador);
 
 module.exports = router;
