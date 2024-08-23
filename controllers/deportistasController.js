@@ -344,13 +344,13 @@ const inscribirDeportistaYCombate = (request, response) => {
             (error, results) => {
                 if (error) {
                     return connection.rollback(() => {
-                        response.status(500).json({
-                            message: "Error al registrar deportista",
-                            error: error.message
+                        response.sendResponse({
+                        statusCode: 500,
+                        message: "Error al registrar deportista",
+                        error: error.message
                         });
                     });
                 }
-
                 const id_deportista = results.insertId;
 
                 const categoriaQueries = id_categorias.map((id_categoriac) => {
@@ -374,22 +374,25 @@ const inscribirDeportistaYCombate = (request, response) => {
                         connection.commit((err) => {
                             if (err) {
                                 return connection.rollback(() => {
-                                    response.status(500).json({
-                                        message: "Error al confirmar la transacción",
-                                        error: err.message
+                                    response.sendResponse({
+                                        statusCode: 500,
+                                        message: "Error al registrar deportista",
+                                        error: error.message
                                     });
                                 });
                             }
 
-                            response.status(200).json({
-                                message: "Deportista registrado e inscrito en las categorías de combate con éxito"
+                            response.sendResponse({
+                                statusCode: 200,
+                                message: "Deportista registrado con exito",
                             });
                         });
                     })
                     .catch((error) => {
                         connection.rollback(() => {
-                            response.status(500).json({
-                                message: "Error al inscribir deportista en las categorías de combate",
+                            response.sendResponse({
+                                statusCode: 500,
+                                message: "Error al registrar deportista",
                                 error: error.message
                             });
                         });
@@ -399,6 +402,82 @@ const inscribirDeportistaYCombate = (request, response) => {
     });
 };
 
+const inscribirDeportistaYPoomsae = (request, response) => {
+    const { nombre, apellido, sexo, peso, club, id_categorias } = request.body;
+
+    connection.beginTransaction((err) => {
+        if (err) {
+            return response.status(500).json({
+                message: "Error al iniciar la transacción",
+                error: err.message
+            });
+        }
+
+        connection.query(
+            "INSERT INTO deportista (nombre, apellido, sexo, peso, club) VALUES (?,?,?,?,?)",
+            [nombre, apellido, sexo, peso, club],
+            (error, results) => {
+                if (error) {
+                    return connection.rollback(() => {
+                        response.sendResponse({
+                        statusCode: 500,
+                        message: "Error al registrar deportista",
+                        error: error.message
+                        });
+                    });
+                }
+                const id_deportista = results.insertId;
+
+                const categoriaQueries = id_categorias.map((id_categoriac) => {
+                    return new Promise((resolve, reject) => {
+                        connection.query(
+                            "INSERT INTO inscritos_poomsae (id_deportista, id_categoriac) VALUES (?, ?)",
+                            [id_deportista, id_categoriac],
+                            (error, results) => {
+                                if (error) {
+                                    reject(error);
+                                } else {
+                                    resolve(results);
+                                }
+                            }
+                        );
+                    });
+                });
+
+                Promise.all(categoriaQueries)
+                    .then(() => {
+                        connection.commit((err) => {
+                            if (err) {
+                                return connection.rollback(() => {
+                                    response.sendResponse({
+                                        statusCode: 500,
+                                        message: "Error al registrar deportista",
+                                        error: error.message
+                                    });
+                                });
+                            }
+
+                            response.sendResponse({
+                                statusCode: 200,
+                                message: "Deportista registrado con exito",
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        connection.rollback(() => {
+                            response.sendResponse({
+                                statusCode: 500,
+                                message: "Error al registrar deportista",
+                                error: error.message
+                            });
+                        });
+                    });
+            }
+        );
+    });
+};
+
+
 module.exports = {
     getDeportistas,
     postDeportistas,
@@ -407,5 +486,6 @@ module.exports = {
     verDeportistasPorCategoria,
     generarBrackets,
     registrarGanador,
-    inscribirDeportistaYCombate
+    inscribirDeportistaYCombate,
+    inscribirDeportistaYPoomsae
 };
