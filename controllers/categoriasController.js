@@ -39,24 +39,107 @@ const getCategoriasCombate = (request, response) => {
 };
 
 const getBracketsCategoria = (request, response) => {
-    const { id_categoria } = request.params;
-    connection.query("SELECT * FROM combate where id_categoria = ?",
-        [id_categoria],
-        (error, results) => {
+    const  { id_categoria }  = request.params;
+    console.log(id_categoria);
+
+    // Obtener la información de la categoría
+    connection.query("SELECT nombre FROM categorias_combate WHERE id_categoriac = ?", [id_categoria], (error, categoria) => {
+        if (error || categoria.length === 0) {
+            return response.status(500).json({
+                statusCode: 500,
+                message: "Error al obtener la categoría",
+                error: error ? error.message : "Categoría no encontrada"
+            });
+        }
+
+        // Obtener los participantes de la categoría
+        connection.query(`
+            SELECT deportista.id_deportista, deportista.nombre 
+            FROM inscritos_combate 
+            JOIN deportista ON inscritos_combate.id_deportista = deportista.id_deportista 
+            WHERE inscritos_combate.id_categoriac = ?
+        `, [id_categoria], (error, deportistas) => {
             if (error) {
-                response.sendResponse({
+                return response.status(500).json({
                     statusCode: 500,
-                    message: "Error al ver bracket",
+                    message: "Error al obtener los deportistas",
                     error: error.message
                 });
-            } else {
-                response.sendResponse({
-                    statusCode: 200,
-                    message: "Resultados del bracket",
-                    data: results
-                });
             }
+
+            // Obtener los combates de la categoría
+            connection.query("SELECT * FROM combate WHERE id_categoria = ?", [id_categoria], (error, combates) => {
+                if (error) {
+                    return response.status(500).json({
+                        statusCode: 500,
+                        message: "Error al obtener los combates",
+                        error: error.message
+                    });
+                }
+
+                // Crear la estructura del JSON
+                const jsonResponse = {
+                    participant: deportistas.map(deportista => ({
+                        id: deportista.id_deportista,
+                        tournament_id: id_categoria,
+                        name: deportista.nombre
+                    })),
+                    stage: [
+                        {
+                            id: 0,
+                            tournament_id: 0,
+                            name: "copa sunbae",
+                            type: "single_elimination",
+                            number: 1,
+                            settings: {
+                                seedOrdering: ["natural"],
+                                consolationFinal: true,
+                                size: deportistas.length, // tamaño total de deportistas
+                                matchesChildCount: 0
+                            }
+                        }
+                    ],
+                    round: combates.reduce((rounds, combate) => {
+                        const roundNumber = combate.round;
+                        if (!rounds.some(round => round.number === roundNumber)) {
+                            rounds.push({
+                                id: rounds.length,
+                                number: roundNumber,
+                                stage_id: 0,
+                                group_id: 0 // Puedes cambiar esta lógica si hay grupos
+                            });
+                        }
+                        return rounds;
+                    }, []),
+                    match: combates.map((combate, index) => ({
+                        id: combate.id_combate,
+                        number: index + 1,
+                        stage_id: 0,
+                        group_id: 0,
+                        round_id: combate.round - 1, // El índice en `round` corresponde a round_id
+                        child_count: 0,
+                        status: combate.id_jugador_1 && combate.id_jugador_2 ? 2 : 0,
+                        opponent1: {
+                            id: combate.id_jugador_1,
+                            position: 1
+                        },
+                        opponent2: {
+                            id: combate.id_jugador_2,
+                            position: 2
+                        },
+                        winner: combate.ganador // Añadir el ganador del combate
+                    }))
+                };
+
+                // Enviar la respuesta en formato JSON
+                response.status(200).json({
+                    statusCode: 200,
+                    message: "Brackets obtenidos con éxito",
+                    data: jsonResponse
+                });
+            });
         });
+    });
 };
 
 module.exports = {
