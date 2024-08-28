@@ -481,7 +481,7 @@ const registrarGanador = (request, response) => {
 };
 
 const inscribirDeportistaYCombate = (request, response) => {
-    const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps } = request.body;
+    const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps,id_categorias } = request.body;
     connection.beginTransaction((err) => {
         if (err) {
             return response.status(500).json({
@@ -553,7 +553,7 @@ const inscribirDeportistaYCombate = (request, response) => {
 };
 
 const inscribirDeportistaYPoomsae = (request, response) => {
-    const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps } = request.body;
+    const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps,id_categorias } = request.body;
     connection.beginTransaction((err) => {
         if (err) {
             return response.status(500).json({
@@ -578,7 +578,7 @@ const inscribirDeportistaYPoomsae = (request, response) => {
                 const categoriaQueries = id_categorias.map((id_categoriac) => {
                     return new Promise((resolve, reject) => {
                         connection.query(
-                            "INSERT INTO inscritos_poomsae (id_deportista, id_categoriac) VALUES (?, ?)",
+                            "INSERT INTO inscritos_poomsae (id_deportista, id_categoriap) VALUES (?, ?)",
                             [id_deportista, id_categoriac],
                             (error, results) => {
                                 if (error) {
