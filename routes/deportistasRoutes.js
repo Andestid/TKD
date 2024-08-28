@@ -8,7 +8,8 @@ const {
     registrarGanador,
     inscribirDeportistaYCombate,
     inscribirDeportistaYPoomsae,
-    generarBracketsParaTodasLasCategorias
+    generarBracketsParaTodasLasCategorias,
+    getTopFourPositions
     
 } = require('../controllers/deportistasController');
 
@@ -20,5 +21,6 @@ router.post('/registrar_ganador', registrarGanador);
 router.post('/inscribirdeportistacombate',inscribirDeportistaYCombate);
 router.post('/inscribirdeportistapoomsae',inscribirDeportistaYPoomsae);
 router.post('/brackets4all',generarBracketsParaTodasLasCategorias);
+router.post('/winners/:id_categoriac',getTopFourPositions);
 
 module.exports = router;

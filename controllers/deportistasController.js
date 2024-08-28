@@ -170,7 +170,6 @@ const verDeportistasPorCategoria = (request, response) => {
 };
 
 const generarBracketsParaTodasLasCategorias = (request, response) => {
-    // Obtener todas las categorías de la base de datos
     connection.query("SELECT id_categoriac FROM categorias_combate", (error, categorias) => {
         if (error) {
             return response.sendResponse({
@@ -183,7 +182,6 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
         let categoriasProcesadas = 0;
         const totalCategorias = categorias.length;
 
-        // Si no hay categorías, responder con éxito
         if (totalCategorias === 0) {
             return response.sendResponse({
                 statusCode: 200,
@@ -191,7 +189,6 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
             });
         }
 
-        // Procesar cada categoría individualmente
         categorias.forEach(categoria => {
             const { id_categoriac } = categoria;
 
@@ -210,7 +207,6 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
 
                 let num_deportistas = deportistas.length;
                 if (num_deportistas === 0) {
-                    // Si no hay deportistas para esta categoría, continúa con la siguiente
                     categoriasProcesadas++;
                     if (categoriasProcesadas === totalCategorias) {
                         response.sendResponse({
@@ -222,29 +218,40 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
                 }
 
                 const totalRounds = Math.ceil(Math.log2(num_deportistas));
-                const totalCombates = Math.pow(2, totalRounds) - 1;
-
                 let combates = [];
                 let round = 1;
 
                 // Generar combates para la primera ronda
-                for (let i = 0; i < num_deportistas; i += 2) {
+                let ganadoresPrimeraRonda = [];
+
+                for (let i = 0; i < num_deportistas - 1; i += 2) {
                     combates.push([round, id_categoriac, deportistas[i].id_deportista, (i + 1 < num_deportistas) ? deportistas[i + 1].id_deportista : null]);
+                    ganadoresPrimeraRonda.push(null); // Lugar para los ganadores de la primera ronda
                 }
 
-                // Generar combates para las rondas siguientes, sin asignar jugadores
+                // Manejo de competidor que recibe un 'bye'
+                if (num_deportistas % 2 !== 0) {
+                    const byeParticipant = deportistas[num_deportistas - 1].id_deportista;
+                    ganadoresPrimeraRonda.push(byeParticipant); // Este participante va directamente a la segunda ronda
+                }
+
+                // Generar combates para la segunda ronda (round + 1)
+                round++;
+                for (let i = 0; i < ganadoresPrimeraRonda.length; i += 2) {
+                    combates.push([round, id_categoriac, ganadoresPrimeraRonda[i], (i + 1 < ganadoresPrimeraRonda.length) ? ganadoresPrimeraRonda[i + 1] : null]);
+                }
+
+                // Generar combates para rondas adicionales si son necesarias
                 while (round < totalRounds) {
                     round++;
-                    const numCombates = Math.pow(2, totalRounds - round); // Combates en la ronda actual
+                    const numCombates = Math.pow(2, totalRounds - round);
 
                     for (let i = 0; i < numCombates; i++) {
                         combates.push([round, id_categoriac, null, null]);
                     }
                 }
 
-                // Validar y limpiar datos vacíos
                 if (combates.length === 0) {
-                    // Si no hay combates para esta categoría, continúa con la siguiente
                     categoriasProcesadas++;
                     if (categoriasProcesadas === totalCategorias) {
                         response.sendResponse({
@@ -255,10 +262,8 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
                     return;
                 }
 
-                // Imprimir para depuración
                 console.log("Consulta SQL de inserción:", "INSERT INTO combate (round, id_categoria, id_jugador_1, id_jugador_2) VALUES ?", [combates]);
 
-                // Insertar todos los combates en la base de datos
                 connection.query("INSERT INTO combate (round, id_categoria, id_jugador_1, id_jugador_2) VALUES ?", [combates], (error) => {
                     if (error) {
                         console.error("Error al registrar los combates para categoría:", id_categoriac, error.message);
@@ -266,7 +271,6 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
 
                     categoriasProcesadas++;
 
-                    // Verificar si se han procesado todas las categorías
                     if (categoriasProcesadas === totalCategorias) {
                         response.sendResponse({
                             statusCode: 200,
@@ -278,7 +282,6 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
         });
     });
 };
-
 const generarBrackets = (request, response) => {
     const { id_categoriac } = request.params;
 
@@ -334,154 +337,89 @@ const generarBrackets = (request, response) => {
 
 const registrarGanador = (request, response) => {
     const { id_combate, id_ganador } = request.body;
-    
-    connection.query("UPDATE combate SET ganador = ? WHERE id_combate = ?", [id_ganador, id_combate], (error, results) => {
-        if (error) {
-            response.sendResponse({
+
+    // Obtener detalles del combate actual
+    connection.query("SELECT round, id_categoria, ganador FROM combate WHERE id_combate = ?", [id_combate], (error, combateActual) => {
+        if (error || combateActual.length === 0) {
+            return response.sendResponse({
                 statusCode: 500,
-                message: "Error al registrar el ganador",
-                error: error.message
-            });
-        } else {
-            connection.query("SELECT * FROM combate WHERE id_combate = ?", [id_combate], (error, combate) => {
-                if (error || !combate.length) {
-                    response.sendResponse({
-                        statusCode: 500,
-                        message: "Error al obtener los datos del combate",
-                        error: error ? error.message : "Combate no encontrado"
-                    });
-                } else {
-                    const { id_categoria, round, id_jugador_1, id_jugador_2 } = combate[0];
-                    const nuevo_round = round + 1;
-                    
-                    // Verificar si hay un combate en la siguiente ronda sin oponente
-                    connection.query(
-                        "SELECT id_combate, id_jugador_1, id_jugador_2 FROM combate WHERE id_categoria = ? AND round = ? AND (id_jugador_1 IS NULL OR id_jugador_2 IS NULL) LIMIT 1",
-                        [id_categoria, nuevo_round],
-                        (error, next_combate) => {
-                            if (error) {
-                                response.sendResponse({
-                                    statusCode: 500,
-                                    message: "Error al buscar oponente en la siguiente ronda",
-                                    error: error.message
-                                });
-                            } else if (next_combate.length > 0) {
-                                const combate_siguiente = next_combate[0];
-                                if (combate_siguiente.id_jugador_1 === null) {
-                                    // Asignar el ganador como jugador 1 si está vacío
-                                    connection.query(
-                                        "UPDATE combate SET id_jugador_1 = ? WHERE id_combate = ?",
-                                        [id_ganador, combate_siguiente.id_combate],
-                                        (error, results) => {
-                                            if (error) {
-                                                response.sendResponse({
-                                                    statusCode: 500,
-                                                    message: "Error al actualizar el combate en la siguiente ronda",
-                                                    error: error.message
-                                                });
-                                            } else {
-                                                response.sendResponse({
-                                                    statusCode: 200,
-                                                    message: "Ganador registrado y avanzó a la siguiente ronda"
-                                                });
-                                            }
-                                        }
-                                    );
-                                } else if (combate_siguiente.id_jugador_2 === null) {
-                                    // Asignar el ganador como jugador 2 si está vacío
-                                    connection.query(
-                                        "UPDATE combate SET id_jugador_2 = ? WHERE id_combate = ?",
-                                        [id_ganador, combate_siguiente.id_combate],
-                                        (error, results) => {
-                                            if (error) {
-                                                response.sendResponse({
-                                                    statusCode: 500,
-                                                    message: "Error al actualizar el combate en la siguiente ronda",
-                                                    error: error.message
-                                                });
-                                            } else {
-                                                response.sendResponse({
-                                                    statusCode: 200,
-                                                    message: "Ganador registrado y avanzó a la siguiente ronda"
-                                                });
-                                            }
-                                        }
-                                    );
-                                }
-                            } else {
-                                // Si no hay combates disponibles, manejar el caso del 'bye'
-                                connection.query(
-                                    "SELECT * FROM combate WHERE id_categoria = ? AND round = ? AND (id_jugador_1 IS NULL OR id_jugador_2 IS NULL)",
-                                    [id_categoria, nuevo_round - 1],
-                                    (error, prev_combat) => {
-                                        if (error) {
-                                            response.sendResponse({
-                                                statusCode: 500,
-                                                message: "Error al verificar combates previos",
-                                                error: error.message
-                                            });
-                                        } else if (prev_combat.length === 1) {
-                                            // Si hay un combate en la ronda anterior con un solo jugador, asignar el jugador al nuevo combate
-                                            const prev_winner = prev_combat[0].id_jugador_1 || prev_combat[0].id_jugador_2;
-                                            if (prev_winner) {
-                                                connection.query(
-                                                    "INSERT INTO combate (round, id_categoria, id_jugador_1) VALUES (?, ?, ?)",
-                                                    [nuevo_round, id_categoria, prev_winner],
-                                                    (error, results) => {
-                                                        if (error) {
-                                                            response.sendResponse({
-                                                                statusCode: 500,
-                                                                message: "Error al crear el combate en la siguiente ronda",
-                                                                error: error.message
-                                                            });
-                                                        } else {
-                                                            response.sendResponse({
-                                                                statusCode: 200,
-                                                                message: "Ganador registrado y avanzó a la siguiente ronda"
-                                                            });
-                                                        }
-                                                    }
-                                                );
-                                            } else {
-                                                response.sendResponse({
-                                                    statusCode: 200,
-                                                    message: "Ganador registrado, esperando el oponente"
-                                                });
-                                            }
-                                        } else {
-                                            // Si no se cumple el caso anterior, crear un nuevo combate
-                                            connection.query(
-                                                "INSERT INTO combate (round, id_categoria, id_jugador_1) VALUES (?, ?, ?)",
-                                                [nuevo_round, id_categoria, id_ganador],
-                                                (error, results) => {
-                                                    if (error) {
-                                                        response.sendResponse({
-                                                            statusCode: 500,
-                                                            message: "Error al crear el combate en la siguiente ronda",
-                                                            error: error.message
-                                                        });
-                                                    } else {
-                                                        response.sendResponse({
-                                                            statusCode: 200,
-                                                            message: "Ganador registrado y avanzó a la siguiente ronda"
-                                                        });
-                                                    }
-                                                }
-                                            );
-                                        }
-                                    }
-                                );
-                            }
-                        }
-                    );
-                }
+                message: "Error al obtener el combate o combate no encontrado",
+                error: error ? error.message : "Combate no encontrado"
             });
         }
+
+        const { round, id_categoria, ganador } = combateActual[0];
+
+        // Verificar si ya se ha asignado un ganador
+        if (ganador !== null) {
+            return response.sendResponse({
+                statusCode: 400,
+                message: "Este combate ya tiene un ganador asignado",
+            });
+        }
+
+        // Actualizar el ganador en el combate actual
+        connection.query("UPDATE combate SET ganador = ? WHERE id_combate = ?", [id_ganador, id_combate], (error) => {
+            if (error) {
+                return response.sendResponse({
+                    statusCode: 500,
+                    message: "Error al registrar el ganador",
+                    error: error.message
+                });
+            }
+
+            // Identificar el siguiente combate en la ronda superior
+            connection.query(`
+                SELECT id_combate, id_jugador_1, id_jugador_2
+                FROM combate
+                WHERE id_categoria = ?
+                AND round = ?
+                AND (id_jugador_1 IS NULL OR id_jugador_2 IS NULL)
+                ORDER BY id_combate ASC
+                LIMIT 1
+            `, [id_categoria, round + 1], (error, combateSiguiente) => {
+                if (error || combateSiguiente.length === 0) {
+                    return response.sendResponse({
+                        statusCode: 200,
+                        message: "Ganador registrado con éxito, no hay más combates en esta categoría",
+                    });
+                }
+
+                const siguienteCombate = combateSiguiente[0];
+                const { id_combate: idCombateSiguiente, id_jugador_1, id_jugador_2 } = siguienteCombate;
+
+                // Determinar en qué posición debe colocarse el ganador
+                let campoAActualizar = 'id_jugador_1';
+                if (id_jugador_1 !== null) {
+                    campoAActualizar = 'id_jugador_2';
+                }
+
+                // Asignar el ganador al siguiente combate
+                connection.query(`
+                    UPDATE combate
+                    SET ${campoAActualizar} = ?
+                    WHERE id_combate = ?
+                `, [id_ganador, idCombateSiguiente], (error) => {
+                    if (error) {
+                        return response.sendResponse({
+                            statusCode: 500,
+                            message: "Error al avanzar el ganador al siguiente combate",
+                            error: error.message
+                        });
+                    }
+
+                    response.sendResponse({
+                        statusCode: 200,
+                        message: "Ganador registrado y avanzado con éxito al siguiente combate",
+                    });
+                });
+            });
+        });
     });
 };
 
 const inscribirDeportistaYCombate = (request, response) => {
-    const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps,id_categorias } = request.body;
+    const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps, hospedaje, id_categorias } = request.body;
     connection.beginTransaction((err) => {
         if (err) {
             return response.status(500).json({
@@ -489,8 +427,8 @@ const inscribirDeportistaYCombate = (request, response) => {
                 error: err.message
             });
         }
-        connection.query("INSERT INTO deportista (nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-        [nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps],
+        connection.query("INSERT INTO deportista (nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps, hospedaje) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        [nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps, hospedaje],
             (error, results) => {
                 if (error) {
                     return connection.rollback(() => {
@@ -553,7 +491,7 @@ const inscribirDeportistaYCombate = (request, response) => {
 };
 
 const inscribirDeportistaYPoomsae = (request, response) => {
-    const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps,id_categorias } = request.body;
+    const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps, hospedaje, id_categorias } = request.body;
     connection.beginTransaction((err) => {
         if (err) {
             return response.status(500).json({
@@ -561,8 +499,8 @@ const inscribirDeportistaYPoomsae = (request, response) => {
                 error: err.message
             });
         }
-        connection.query("INSERT INTO deportista (nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-        [nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps],
+        connection.query("INSERT INTO deportista (nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps, hospedaje) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        [nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps, hospedaje],
             (error, results) => {
                 if (error) {
                     return connection.rollback(() => {
@@ -624,6 +562,61 @@ const inscribirDeportistaYPoomsae = (request, response) => {
     });
 };
 
+const getTopFourPositions = (request, response) => {
+    const { id_categoriac } = request.params;
+
+    // Obtener los combates de la categoría en orden descendente de rondas
+    connection.query(`
+        SELECT * FROM combate 
+        WHERE id_categoria = ? 
+        ORDER BY round DESC
+    `, [id_categoriac], (error, combates) => {
+        if (error) {
+            return response.status(500).json({
+                statusCode: 500,
+                message: "Error al obtener los combates",
+                error: error.message
+            });
+        }
+
+        if (combates.length === 0) {
+            return response.status(404).json({
+                statusCode: 404,
+                message: "No se encontraron combates para esta categoría"
+            });
+        }
+
+        // Identificar el ganador del último combate (final)
+        const finalMatch = combates[0];
+        const winner = finalMatch.ganador;
+        const secondPlace = (finalMatch.id_jugador_1 === winner) ? finalMatch.id_jugador_2 : finalMatch.id_jugador_1;
+
+        // Identificar a los dos perdedores de las semifinales
+        const semiFinalMatches = combates.filter(c => c.round === finalMatch.round - 1);
+        const semiFinalLosers = semiFinalMatches.map(match => 
+            (match.id_jugador_1 === match.ganador) ? match.id_jugador_2 : match.id_jugador_1
+        );
+
+        // Verificar si hay menos de dos semifinalistas
+        const third = semiFinalLosers[0] || null;
+        const fourth = semiFinalLosers[1] || null;
+
+        // Crear la estructura del JSON para las posiciones
+        const topFour = {
+            first: winner,
+            second: secondPlace,
+            third: third,
+            fourth: fourth
+        };
+
+        // Enviar la respuesta en formato JSON
+        response.status(200).json({
+            statusCode: 200,
+            message: "Top 4 posiciones obtenidas con éxito",
+            data: topFour
+        });
+    });
+};
 
 module.exports = {
     getDeportistas,
@@ -635,5 +628,6 @@ module.exports = {
     registrarGanador,
     inscribirDeportistaYCombate,
     inscribirDeportistaYPoomsae,
-    generarBracketsParaTodasLasCategorias
+    generarBracketsParaTodasLasCategorias,
+    getTopFourPositions
 };
