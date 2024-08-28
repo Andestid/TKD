@@ -19,9 +19,9 @@ const getDeportistas = (request, response) => {
 };
 
 const postDeportistas = (request, response) => {
-    const { nombre, apellido, sexo, peso, club } = request.body;
-    connection.query("INSERT INTO deportista (nombre, apellido, sexo, peso, club) VALUES (?,?,?,?,?)",
-        [nombre, apellido, sexo, peso, club],
+    const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps } = request.body;
+    connection.query("INSERT INTO deportista (nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        [nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps],
         (error, results) => {
             if (error) {
                 response.sendResponse({
@@ -481,8 +481,7 @@ const registrarGanador = (request, response) => {
 };
 
 const inscribirDeportistaYCombate = (request, response) => {
-    const { nombre, apellido, sexo, peso, club, id_categorias } = request.body;
-
+    const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps } = request.body;
     connection.beginTransaction((err) => {
         if (err) {
             return response.status(500).json({
@@ -490,10 +489,8 @@ const inscribirDeportistaYCombate = (request, response) => {
                 error: err.message
             });
         }
-
-        connection.query(
-            "INSERT INTO deportista (nombre, apellido, sexo, peso, club) VALUES (?,?,?,?,?)",
-            [nombre, apellido, sexo, peso, club],
+        connection.query("INSERT INTO deportista (nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        [nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps],
             (error, results) => {
                 if (error) {
                     return connection.rollback(() => {
@@ -556,8 +553,7 @@ const inscribirDeportistaYCombate = (request, response) => {
 };
 
 const inscribirDeportistaYPoomsae = (request, response) => {
-    const { nombre, apellido, sexo, peso, club, id_categorias } = request.body;
-
+    const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps } = request.body;
     connection.beginTransaction((err) => {
         if (err) {
             return response.status(500).json({
@@ -565,10 +561,8 @@ const inscribirDeportistaYPoomsae = (request, response) => {
                 error: err.message
             });
         }
-
-        connection.query(
-            "INSERT INTO deportista (nombre, apellido, sexo, peso, club) VALUES (?,?,?,?,?)",
-            [nombre, apellido, sexo, peso, club],
+        connection.query("INSERT INTO deportista (nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        [nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps],
             (error, results) => {
                 if (error) {
                     return connection.rollback(() => {
