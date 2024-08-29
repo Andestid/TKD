@@ -39,9 +39,8 @@ const getCategoriasCombate = (request, response) => {
 };
 
 const getBracketsCategoria = (request, response) => {
-    const  { id_categoria }  = request.params;
+    const { id_categoria } = request.params;
 
-    // Obtener la información de la categoría
     connection.query("SELECT nombre FROM categorias_combate WHERE id_categoriac = ?", [id_categoria], (error, categoria) => {
         if (error || categoria.length === 0) {
             return response.status(500).json({
@@ -51,7 +50,6 @@ const getBracketsCategoria = (request, response) => {
             });
         }
 
-        // Obtener los participantes de la categoría
         connection.query(`
             SELECT deportista.id_deportista, deportista.nombre 
             FROM inscritos_combate 
@@ -66,7 +64,6 @@ const getBracketsCategoria = (request, response) => {
                 });
             }
 
-            // Obtener los combates de la categoría
             connection.query("SELECT * FROM combate WHERE id_categoria = ?", [id_categoria], (error, combates) => {
                 if (error) {
                     return response.status(500).json({
@@ -76,20 +73,7 @@ const getBracketsCategoria = (request, response) => {
                     });
                 }
 
-                // Crear la estructura del JSON
-                const rounds = [];
-                combates.forEach(combate => {
-                    const roundNumber = combate.round;
-                    if (!rounds.some(round => round.number === roundNumber)) {
-                        rounds.push({
-                            id: rounds.length,
-                            number: roundNumber,
-                            stage_id: 0,
-                            group_id: 0 // Puedes ajustar esta lógica si hay grupos
-                        });
-                    }
-                });
-
+                // Estructura del JSON ajustada a las interfaces
                 const jsonResponse = {
                     participant: deportistas.map(deportista => ({
                         id: deportista.id_deportista,
@@ -100,7 +84,7 @@ const getBracketsCategoria = (request, response) => {
                         {
                             id: 0,
                             tournament_id: 0,
-                            name: categoria[0].nombre,
+                            name: "copa sunbae",
                             type: "single_elimination",
                             number: 1,
                             settings: {
@@ -111,13 +95,29 @@ const getBracketsCategoria = (request, response) => {
                             }
                         }
                     ],
-                    round: rounds,
+                    group: [{
+                        id: 0,
+                        stage_id: 0,
+                        number: 1 // Puedes ajustar según la lógica que manejes
+                    }],
+                    round: combates.reduce((rounds, combate) => {
+                        const roundNumber = combate.round;
+                        if (!rounds.some(round => round.number === roundNumber)) {
+                            rounds.push({
+                                id: rounds.length,
+                                stage_id: 0,
+                                group_id: 0,
+                                number: roundNumber
+                            });
+                        }
+                        return rounds;
+                    }, []),
                     match: combates.map((combate, index) => ({
                         id: combate.id_combate,
-                        number: index + 1,
                         stage_id: 0,
                         group_id: 0,
-                        round_id: rounds.findIndex(round => round.number === combate.round),
+                        round_id: combate.round, 
+                        number: index + 1,
                         child_count: 0,
                         status: combate.id_jugador_1 && combate.id_jugador_2 ? 2 : 0,
                         opponent1: {
@@ -128,10 +128,10 @@ const getBracketsCategoria = (request, response) => {
                             id: combate.id_jugador_2,
                             position: 2
                         }
-                    }))
+                    })),
+                    match_game: [] // Si tienes sub-partidos, puedes manejarlos aquí
                 };
 
-                // Enviar la respuesta en formato JSON
                 response.status(200).json({
                     statusCode: 200,
                     message: "Brackets obtenidos con éxito",
