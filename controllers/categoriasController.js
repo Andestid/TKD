@@ -116,7 +116,7 @@ const getBracketsCategoria = (request, response) => {
                         number: index + 1,
                         stage_id: 0,
                         group_id: 0,
-                        round: combate.round, // El índice en `round` corresponde a round_id
+                        round_id: combate.round, // El índice en `round` corresponde a round_id
                         child_count: 0,
                         status: combate.id_jugador_1 && combate.id_jugador_2 ? 2 : 0,
                         opponent1: {
