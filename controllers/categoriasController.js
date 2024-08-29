@@ -73,12 +73,12 @@ const getBracketsCategoria = (request, response) => {
                     });
                 }
 
-                // Estructura del JSON ajustada al formato requerido
+                // Estructura del JSON ajustada a las interfaces
                 const jsonResponse = {
-                    participant: deportistas.map((deportista, index) => ({
-                        id: index,
-                        tournament_id: 0,
-                        name: `Team ${index + 1}`
+                    participant: deportistas.map(deportista => ({
+                        id: deportista.id_deportista,
+                        tournament_id: id_categoria,
+                        name: deportista.nombre
                     })),
                     stage: [
                         {
@@ -95,55 +95,41 @@ const getBracketsCategoria = (request, response) => {
                             }
                         }
                     ],
-                    group: [
-                        { id: 0, stage_id: 0, number: 1 },
-                        { id: 1, stage_id: 0, number: 2 }
-                    ],
-                    round: combates.reduce((rounds, combate, index) => {
-                        const roundNumber = combate.round - 1;
+                    group: [{
+                        id: 0,
+                        stage_id: 0,
+                        number: 1 // Puedes ajustar según la lógica que manejes
+                    }],
+                    round: combates.reduce((rounds, combate) => {
+                        const roundNumber = combate.round;
                         if (!rounds.some(round => round.number === roundNumber)) {
                             rounds.push({
                                 id: rounds.length,
-                                number: roundNumber + 1,
                                 stage_id: 0,
-                                group_id: 0
+                                group_id: 0,
+                                number: roundNumber
                             });
                         }
                         return rounds;
-                    }, []).concat({
-                        id: combates.length, // Ajustar el ID para el último grupo adicional
-                        number: 1,
-                        stage_id: 0,
-                        group_id: 1
-                    }),
+                    }, []),
                     match: combates.map((combate, index) => ({
-                        id: index,
-                        number: combate.round,
+                        id: combate.id_combate,
                         stage_id: 0,
                         group_id: 0,
-                        round_id: combate.round - 1,
+                        round_id: combate.round, 
+                        number: index + 1,
                         child_count: 0,
                         status: combate.id_jugador_1 && combate.id_jugador_2 ? 2 : 0,
                         opponent1: {
-                            id: combate.id_jugador_1 ? combate.id_jugador_1 - 43 : null, // Ajuste según IDs de deportistas
+                            id: combate.id_jugador_1,
                             position: 1
                         },
                         opponent2: {
-                            id: combate.id_jugador_2 ? combate.id_jugador_2 - 43 : null, // Ajuste según IDs de deportistas
+                            id: combate.id_jugador_2,
                             position: 2
                         }
-                    })).concat([{
-                        id: combates.length,
-                        number: 1,
-                        stage_id: 0,
-                        group_id: 1,
-                        round_id: combates.length,
-                        child_count: 0,
-                        status: 0,
-                        opponent1: { id: null, position: 1 },
-                        opponent2: { id: null, position: 2 }
-                    }]),
-                    match_game: []
+                    })),
+                    match_game: [] // Si tienes sub-partidos, puedes manejarlos aquí
                 };
 
                 response.status(200).json({
