@@ -18,6 +18,44 @@ const getDeportistas = (request, response) => {
     });
 };
 
+const deleteDeportistas = (request, response) => {
+    const { id_deportista } = request.body;
+    connection.query("DELETE FROM inscritos_combate WHERE id_deportista = ?", [id_deportista], (error, results) => {
+        if (error) {
+            response.send({
+                statusCode: 500,
+                message: "Error al eliminar los registros de inscritos_combate",
+                error: error.message
+            });
+        } else {
+            connection.query("DELETE FROM inscritos_poomsae WHERE id_deportista = ?", [id_deportista], (error, results) => {
+                if (error) {
+                    response.send({
+                        statusCode: 500,
+                        message: "Error al eliminar los registros de inscritos_poomsae",
+                        error: error.message
+                    });
+                } else {
+                    connection.query("DELETE FROM deportista WHERE id_deportista = ?", [id_deportista], (error, results) => {
+                        if (error) {
+                            response.send({
+                                statusCode: 500,
+                                message: "Error al eliminar deportista",
+                                error: error.message
+                            });
+                        } else {
+                            response.send({
+                                statusCode: 200,
+                                message: "Deportista eliminado con éxito",
+                                data: results
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    });
+};
 const postDeportistas = (request, response) => {
     const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps } = request.body;
     connection.query("INSERT INTO deportista (nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
@@ -631,5 +669,6 @@ module.exports = {
     inscribirDeportistaYCombate,
     inscribirDeportistaYPoomsae,
     generarBracketsParaTodasLasCategorias,
-    getTopFourPositions
+    getTopFourPositions,
+    deleteDeportistas
 };
