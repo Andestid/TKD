@@ -56,6 +56,48 @@ const deleteDeportistas = (request, response) => {
         }
     });
 };
+
+const updateDeportista = (request, response) => {
+    const { id_deportista, ...fieldsToUpdate } = request.body;
+
+    if (!id_deportista) {
+        return response.status(400).send({
+            statusCode: 400,
+            message: "El ID del deportista es obligatorio",
+        });
+    }
+
+    const columns = Object.keys(fieldsToUpdate);
+    const values = Object.values(fieldsToUpdate);
+
+    if (columns.length === 0) {
+        return response.status(400).send({
+            statusCode: 400,
+            message: "No hay campos para actualizar",
+        });
+    }
+
+    const setClause = columns.map(column => `${column} = ?`).join(', ');
+
+    const query = `UPDATE deportista SET ${setClause} WHERE id_deportista = ?`;
+
+    connection.query(query, [...values, id_deportista], (error, results) => {
+        if (error) {
+            response.status(500).send({
+                statusCode: 500,
+                message: "Error al actualizar deportista",
+                error: error.message,
+            });
+        } else {
+            response.status(200).send({
+                statusCode: 200,
+                message: "Deportista actualizado con éxito",
+                data: results,
+            });
+        }
+    });
+};
+
 const postDeportistas = (request, response) => {
     const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps } = request.body;
     connection.query("INSERT INTO deportista (nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
@@ -670,5 +712,6 @@ module.exports = {
     inscribirDeportistaYPoomsae,
     generarBracketsParaTodasLasCategorias,
     getTopFourPositions,
-    deleteDeportistas
+    deleteDeportistas,
+    updateDeportista
 };
