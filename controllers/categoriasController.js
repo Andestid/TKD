@@ -126,8 +126,9 @@ const getBracketsCategoria = (request, response) => {
                         opponent2: {
                             id: combate.id_jugador_2,
                             position: 2
-                        },
-                        winner: combate.ganador // Añadir el ganador del combate
+                        }
+                        //,
+                        //winner: combate.ganador // Añadir el ganador del combate
                     }))
                 };
 
