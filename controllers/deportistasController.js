@@ -473,6 +473,7 @@ const inscribirDeportistaYCombate = (request, response) => {
                             response.sendResponse({
                                 statusCode: 200,
                                 message: "Deportista registrado con exito",
+                                data: id_deportista
                             });
                         });
                     })
@@ -545,6 +546,7 @@ const inscribirDeportistaYPoomsae = (request, response) => {
                             response.sendResponse({
                                 statusCode: 200,
                                 message: "Deportista registrado con exito",
+                                data: id_deportista
                             });
                         });
                     })
