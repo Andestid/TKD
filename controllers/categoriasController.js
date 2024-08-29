@@ -40,7 +40,6 @@ const getCategoriasCombate = (request, response) => {
 
 const getBracketsCategoria = (request, response) => {
     const  { id_categoria }  = request.params;
-    console.log(id_categoria);
 
     // Obtener la información de la categoría
     connection.query("SELECT nombre FROM categorias_combate WHERE id_categoriac = ?", [id_categoria], (error, categoria) => {
@@ -78,6 +77,19 @@ const getBracketsCategoria = (request, response) => {
                 }
 
                 // Crear la estructura del JSON
+                const rounds = [];
+                combates.forEach(combate => {
+                    const roundNumber = combate.round;
+                    if (!rounds.some(round => round.number === roundNumber)) {
+                        rounds.push({
+                            id: rounds.length,
+                            number: roundNumber,
+                            stage_id: 0,
+                            group_id: 0 // Puedes ajustar esta lógica si hay grupos
+                        });
+                    }
+                });
+
                 const jsonResponse = {
                     participant: deportistas.map(deportista => ({
                         id: deportista.id_deportista,
@@ -88,35 +100,24 @@ const getBracketsCategoria = (request, response) => {
                         {
                             id: 0,
                             tournament_id: 0,
-                            name: "copa sunbae",
+                            name: categoria[0].nombre,
                             type: "single_elimination",
                             number: 1,
                             settings: {
                                 seedOrdering: ["natural"],
                                 consolationFinal: true,
-                                size: deportistas.length, // tamaño total de deportistas
+                                size: deportistas.length,
                                 matchesChildCount: 0
                             }
                         }
                     ],
-                    round: combates.reduce((rounds, combate) => {
-                        const roundNumber = combate.round;
-                        if (!rounds.some(round => round.number === roundNumber)) {
-                            rounds.push({
-                                id: rounds.length,
-                                number: roundNumber,
-                                stage_id: 0,
-                                group_id: 0 // Puedes cambiar esta lógica si hay grupos
-                            });
-                        }
-                        return rounds;
-                    }, []),
+                    round: rounds,
                     match: combates.map((combate, index) => ({
                         id: combate.id_combate,
                         number: index + 1,
                         stage_id: 0,
                         group_id: 0,
-                        round_id: combate.round, // El índice en `round` corresponde a round_id
+                        round_id: rounds.findIndex(round => round.number === combate.round),
                         child_count: 0,
                         status: combate.id_jugador_1 && combate.id_jugador_2 ? 2 : 0,
                         opponent1: {
@@ -127,8 +128,6 @@ const getBracketsCategoria = (request, response) => {
                             id: combate.id_jugador_2,
                             position: 2
                         }
-                        //,
-                        //winner: combate.ganador // Añadir el ganador del combate
                     }))
                 };
 
