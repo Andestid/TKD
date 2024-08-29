@@ -272,91 +272,107 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
         categorias.forEach(categoria => {
             const { id_categoriac } = categoria;
 
-            connection.query("SELECT id_deportista FROM inscritos_combate WHERE id_categoriac = ?", [id_categoriac], (error, deportistas) => {
+            // Eliminar combates existentes para la categoría
+            connection.query("DELETE FROM combate WHERE id_categoria = ?", [id_categoriac], (error) => {
                 if (error) {
-                    console.error("Error al obtener los deportistas para categoría:", id_categoriac, error.message);
+                    console.error("Error al eliminar combates para categoría:", id_categoriac, error.message);
                     categoriasProcesadas++;
                     if (categoriasProcesadas === totalCategorias) {
                         response.sendResponse({
-                            statusCode: 200,
-                            message: "Brackets generados con éxito para todas las categorías (con errores en algunos casos)",
+                            statusCode: 500,
+                            message: "Error al eliminar combates para algunas categorías"
                         });
                     }
                     return;
                 }
 
-                let num_deportistas = deportistas.length;
-                if (num_deportistas === 0) {
-                    categoriasProcesadas++;
-                    if (categoriasProcesadas === totalCategorias) {
-                        response.sendResponse({
-                            statusCode: 200,
-                            message: "Brackets generados con éxito para todas las categorías",
-                        });
-                    }
-                    return;
-                }
-
-                const totalRounds = Math.ceil(Math.log2(num_deportistas));
-                let combates = [];
-                let round = 1;
-
-                // Generar combates para la primera ronda
-                let ganadoresPrimeraRonda = [];
-
-                for (let i = 0; i < num_deportistas - 1; i += 2) {
-                    combates.push([round, id_categoriac, deportistas[i].id_deportista, (i + 1 < num_deportistas) ? deportistas[i + 1].id_deportista : null]);
-                    ganadoresPrimeraRonda.push(null); // Lugar para los ganadores de la primera ronda
-                }
-
-                // Manejo de competidor que recibe un 'bye'
-                if (num_deportistas % 2 !== 0) {
-                    const byeParticipant = deportistas[num_deportistas - 1].id_deportista;
-                    ganadoresPrimeraRonda.push(byeParticipant); // Este participante va directamente a la segunda ronda
-                }
-
-                // Generar combates para la segunda ronda (round + 1)
-                round++;
-                for (let i = 0; i < ganadoresPrimeraRonda.length; i += 2) {
-                    combates.push([round, id_categoriac, ganadoresPrimeraRonda[i], (i + 1 < ganadoresPrimeraRonda.length) ? ganadoresPrimeraRonda[i + 1] : null]);
-                }
-
-                // Generar combates para rondas adicionales si son necesarias
-                while (round < totalRounds) {
-                    round++;
-                    const numCombates = Math.pow(2, totalRounds - round);
-
-                    for (let i = 0; i < numCombates; i++) {
-                        combates.push([round, id_categoriac, null, null]);
-                    }
-                }
-
-                if (combates.length === 0) {
-                    categoriasProcesadas++;
-                    if (categoriasProcesadas === totalCategorias) {
-                        response.sendResponse({
-                            statusCode: 200,
-                            message: "Brackets generados con éxito para todas las categorías",
-                        });
-                    }
-                    return;
-                }
-
-                console.log("Consulta SQL de inserción:", "INSERT INTO combate (round, id_categoria, id_jugador_1, id_jugador_2) VALUES ?", [combates]);
-
-                connection.query("INSERT INTO combate (round, id_categoria, id_jugador_1, id_jugador_2) VALUES ?", [combates], (error) => {
+                // Obtener deportistas de la categoría
+                connection.query("SELECT id_deportista FROM inscritos_combate WHERE id_categoriac = ?", [id_categoriac], (error, deportistas) => {
                     if (error) {
-                        console.error("Error al registrar los combates para categoría:", id_categoriac, error.message);
+                        console.error("Error al obtener los deportistas para categoría:", id_categoriac, error.message);
+                        categoriasProcesadas++;
+                        if (categoriasProcesadas === totalCategorias) {
+                            response.sendResponse({
+                                statusCode: 200,
+                                message: "Brackets generados con éxito para todas las categorías (con errores en algunos casos)",
+                            });
+                        }
+                        return;
                     }
 
-                    categoriasProcesadas++;
-
-                    if (categoriasProcesadas === totalCategorias) {
-                        response.sendResponse({
-                            statusCode: 200,
-                            message: "Brackets generados con éxito para todas las categorías",
-                        });
+                    let num_deportistas = deportistas.length;
+                    if (num_deportistas === 0) {
+                        categoriasProcesadas++;
+                        if (categoriasProcesadas === totalCategorias) {
+                            response.sendResponse({
+                                statusCode: 200,
+                                message: "Brackets generados con éxito para todas las categorías",
+                            });
+                        }
+                        return;
                     }
+
+                    const totalRounds = Math.ceil(Math.log2(num_deportistas));
+                    let combates = [];
+                    let round = 1;
+
+                    // Generar combates para la primera ronda
+                    let ganadoresPrimeraRonda = [];
+
+                    for (let i = 0; i < num_deportistas - 1; i += 2) {
+                        combates.push([round, id_categoriac, deportistas[i].id_deportista, (i + 1 < num_deportistas) ? deportistas[i + 1].id_deportista : null]);
+                        ganadoresPrimeraRonda.push(null); // Lugar para los ganadores de la primera ronda
+                    }
+
+                    // Manejo de competidor que recibe un 'bye'
+                    if (num_deportistas % 2 !== 0) {
+                        const byeParticipant = deportistas[num_deportistas - 1].id_deportista;
+                        ganadoresPrimeraRonda.push(byeParticipant); // Este participante va directamente a la segunda ronda
+                    }
+
+                    // Generar combates para la segunda ronda (round + 1)
+                    round++;
+                    for (let i = 0; i < ganadoresPrimeraRonda.length; i += 2) {
+                        combates.push([round, id_categoriac, ganadoresPrimeraRonda[i], (i + 1 < ganadoresPrimeraRonda.length) ? ganadoresPrimeraRonda[i + 1] : null]);
+                    }
+
+                    // Generar combates para rondas adicionales si son necesarias
+                    while (round < totalRounds) {
+                        round++;
+                        const numCombates = Math.pow(2, totalRounds - round);
+
+                        for (let i = 0; i < numCombates; i++) {
+                            combates.push([round, id_categoriac, null, null]);
+                        }
+                    }
+
+                    if (combates.length === 0) {
+                        categoriasProcesadas++;
+                        if (categoriasProcesadas === totalCategorias) {
+                            response.sendResponse({
+                                statusCode: 200,
+                                message: "Brackets generados con éxito para todas las categorías",
+                            });
+                        }
+                        return;
+                    }
+
+                    console.log("Consulta SQL de inserción:", "INSERT INTO combate (round, id_categoria, id_jugador_1, id_jugador_2) VALUES ?", [combates]);
+
+                    connection.query("INSERT INTO combate (round, id_categoria, id_jugador_1, id_jugador_2) VALUES ?", [combates], (error) => {
+                        if (error) {
+                            console.error("Error al registrar los combates para categoría:", id_categoriac, error.message);
+                        }
+
+                        categoriasProcesadas++;
+
+                        if (categoriasProcesadas === totalCategorias) {
+                            response.sendResponse({
+                                statusCode: 200,
+                                message: "Brackets generados con éxito para todas las categorías",
+                            });
+                        }
+                    });
                 });
             });
         });
