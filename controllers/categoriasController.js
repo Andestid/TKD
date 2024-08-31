@@ -151,14 +151,14 @@ const getBracketsCategoria = (request, response) => {
                             opponent1: {
                                 id: deportistasMap[combate.id_jugador_1] !== undefined ? deportistasMap[combate.id_jugador_1] : null,
                                 ...(roundId === 0 ? { position: combate.id_jugador_1 } : {}),
-                                score: score1,
-                                result: result1
+                                ...(score1 !== null ? { score: score1 } : {}),
+                                ...(result1 !== null ? { result: result1 } : {})
                             },
                             opponent2: {
                                 id: deportistasMap[combate.id_jugador_2] !== undefined ? deportistasMap[combate.id_jugador_2] : null,
                                 ...(roundId === 0 ? { position: combate.id_jugador_2 } : {}),
-                                score: score2,
-                                result: result2
+                                ...(score2 !== null ? { score: score2 } : {}),
+                                ...(result2 !== null ? { result: result2 } : {})
                             }
                         };
                         return matchEntry;
@@ -178,6 +178,7 @@ const getBracketsCategoria = (request, response) => {
         });
     });
 };
+
 
 
 
