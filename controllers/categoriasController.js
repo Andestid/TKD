@@ -73,7 +73,6 @@ const getBracketsCategoria = (request, response) => {
                     });
                 }
 
-                // Calcular tamaño y redondeo hacia arriba
                 let num_deportistas = deportistas.length;
                 if (num_deportistas === 0) {
                     return response.status(400).json({
@@ -89,12 +88,6 @@ const getBracketsCategoria = (request, response) => {
                 // Crear un mapa para buscar deportistas rápidamente
                 const deportistasMap = deportistas.reduce((map, deportista, index) => {
                     map[deportista.id_deportista] = index;
-                    return map;
-                }, {});
-
-                // Crear un mapa para contar combates por ronda
-                const roundCount = combates.reduce((map, combate) => {
-                    map[combate.round] = (map[combate.round] || 0) + 1;
                     return map;
                 }, {});
 
@@ -125,21 +118,20 @@ const getBracketsCategoria = (request, response) => {
                         stage_id: 0,
                         number: 1
                     }],
-                    round: Array.from({ length: Math.min(totalRounds, 5) }).map((_, roundIndex) => ({
+                    round: Array.from({ length: totalRounds }).map((_, roundIndex) => ({
                         id: roundIndex,
                         stage_id: 0,
                         group_id: 0,
                         number: roundIndex + 1
                     })),
                     match: combates.map((combate, index) => {
-                        const roundId = combate.round;
-                        const matchesInRound = roundCount[roundId];
+                        const roundId = combate.round - 1; // Asegúrate de que `combate.round` esté en base 1
                         return {
                             id: index,
                             stage_id: 0,
                             group_id: 0,
-                            round_id: roundId -1,
-                            number: (index % matchesInRound) + 1,
+                            round_id: roundId,
+                            number: (index % 2) + 1, // Ajusta el número de match por round
                             child_count: 0,
                             status: 5,
                             opponent1: {
@@ -154,6 +146,9 @@ const getBracketsCategoria = (request, response) => {
                     }),
                     match_game: [] // Si tienes sub-partidos, puedes manejarlos aquí
                 };
+
+                // Filtrar rounds y matches innecesarios
+                jsonResponse.match = jsonResponse.match.filter(match => match.round_id < totalRounds);
 
                 response.status(200).json({
                     statusCode: 200,
