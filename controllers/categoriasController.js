@@ -131,6 +131,7 @@ const getBracketsCategoria = (request, response) => {
                             stage_id: 0,
                             group_id: 0,
                             round_id: roundId,
+                            iddelcombate: combate.id_combate,
                             number: (index % 2) + 1, // Ajusta el número de match por round
                             child_count: 0,
                             status: 5,
