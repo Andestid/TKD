@@ -92,6 +92,12 @@ const getBracketsCategoria = (request, response) => {
                     return map;
                 }, {});
 
+                // Crear un mapa para contar combates por ronda
+                const roundCount = combates.reduce((map, combate) => {
+                    map[combate.round] = (map[combate.round] || 0) + 1;
+                    return map;
+                }, {});
+
                 // Ajustar combates
                 const jsonResponse = {
                     participant: deportistas.map((deportista, index) => ({
@@ -123,16 +129,17 @@ const getBracketsCategoria = (request, response) => {
                         id: roundIndex,
                         stage_id: 0,
                         group_id: 0,
-                        number: roundIndex
+                        number: roundIndex + 1
                     })),
                     match: combates.map((combate, index) => {
                         const roundId = combate.round;
+                        const matchesInRound = roundCount[roundId];
                         return {
                             id: index,
                             stage_id: 0,
                             group_id: 0,
-                            round_id: roundId,
-                            number: index % (combates.filter(c => c.round === roundId).length),
+                            round_id: roundId -1,
+                            number: (index % matchesInRound) + 1,
                             child_count: 0,
                             status: 5,
                             opponent1: {
