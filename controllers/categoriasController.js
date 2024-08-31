@@ -127,7 +127,7 @@ const getBracketsCategoria = (request, response) => {
                     match: combates.map((combate, index) => {
                         const roundId = combate.round - 1; // Asegúrate de que `combate.round` esté en base 1
                         const isFirstRound = roundId === 0;
-                        return {
+                        const matchEntry = {
                             id: index,
                             stage_id: 0,
                             group_id: 0,
@@ -138,13 +138,14 @@ const getBracketsCategoria = (request, response) => {
                             status: 5,
                             opponent1: {
                                 id: deportistasMap[combate.id_jugador_1] !== undefined ? deportistasMap[combate.id_jugador_1] : null,
-                                position: isFirstRound ? combate.id_jugador_1 : null
+                                ...(isFirstRound ? { position: combate.id_jugador_1 } : {})
                             },
                             opponent2: {
                                 id: deportistasMap[combate.id_jugador_2] !== undefined ? deportistasMap[combate.id_jugador_2] : null,
-                                position: isFirstRound ? combate.id_jugador_2 : null
+                                ...(isFirstRound ? { position: combate.id_jugador_2 } : {})
                             }
                         };
+                        return matchEntry;
                     }),
                     match_game: [] // Si tienes sub-partidos, puedes manejarlos aquí
                 };
@@ -161,7 +162,6 @@ const getBracketsCategoria = (request, response) => {
         });
     });
 };
-
 
 
 module.exports = {
