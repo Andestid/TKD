@@ -465,7 +465,7 @@ const generarBrackets = (request, response) => {
 };
 
 const registrarGanador = (request, response) => {
-    const { id_combate, id_ganador } = request.body;
+    const { id_combate, id_ganador, score1, score2 } = request.body;
 
     // Obtener detalles del combate actual
     connection.query("SELECT round, id_categoria, ganador FROM combate WHERE id_combate = ?", [id_combate], (error, combateActual) => {
@@ -488,7 +488,7 @@ const registrarGanador = (request, response) => {
         }
 
         // Actualizar el ganador en el combate actual
-        connection.query("UPDATE combate SET ganador = ? WHERE id_combate = ?", [id_ganador, id_combate], (error) => {
+        connection.query("UPDATE combate SET ganador = ?, score1 = ?, score2 = ? WHERE id_combate = ?", [id_ganador, score1, score2, id_combate], (error) => {
             if (error) {
                 return response.sendResponse({
                     statusCode: 500,
