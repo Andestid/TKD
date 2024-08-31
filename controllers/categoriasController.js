@@ -85,9 +85,6 @@ const getBracketsCategoria = (request, response) => {
                 const size = sizes.find(s => s >= num_deportistas) || sizes[sizes.length - 1];
                 const totalRounds = Math.ceil(Math.log2(size));
 
-                // Manejar 'byes'
-                const byes = size - num_deportistas;
-
                 // Crear un mapa para buscar deportistas rápidamente
                 const deportistasMap = deportistas.reduce((map, deportista, index) => {
                     map[deportista.id_deportista] = index;
@@ -128,7 +125,7 @@ const getBracketsCategoria = (request, response) => {
                         number: roundIndex + 1
                     })),
                     match: combates.map((combate, index) => {
-                        const roundId = combate.round - 1; // Ajustar `round_id` para que sea base 0
+                        const roundId = combate.round - 1; // Asegúrate de que `combate.round` esté en base 1
                         return {
                             id: index,
                             stage_id: 0,
@@ -162,6 +159,7 @@ const getBracketsCategoria = (request, response) => {
         });
     });
 };
+
 
 module.exports = {
     getCategoriasPoomsae,
