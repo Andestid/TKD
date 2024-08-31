@@ -1,7 +1,26 @@
 const { connection } = require("../db.js");
 
 const getDeportistas = (request, response) => {
-    connection.query("SELECT * FROM deportista", (error, results) => {
+    const query = `
+        SELECT 
+            d.*, 
+            IF(cc.id_categoriac IS NOT NULL, 'combate', 'poomsae') AS modalidad,
+            GROUP_CONCAT(IFNULL(cc.nombre, cp.nombre)) AS categorias
+        FROM 
+            deportista d
+        LEFT JOIN 
+            inscritos_combate ic ON d.id_deportista = ic.id_deportista
+        LEFT JOIN 
+            categorias_combate cc ON ic.id_categoriac = cc.id_categoriac
+        LEFT JOIN 
+            inscritos_poomsae ip ON d.id_deportista = ip.id_deportista
+        LEFT JOIN 
+            categorias_poomsae cp ON ip.id_categoriap = cp.id_categoriap
+        GROUP BY 
+            d.id_deportista, modalidad
+    `;
+
+    connection.query(query, (error, results) => {
         if (error) {
             response.sendResponse({
                 statusCode: 500,
