@@ -431,13 +431,21 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
 const registrarGanador = (request, response) => {
     const { id_combate, id_ganador, score1, score2 } = request.body;
 
+    // Verificar que todos los parámetros estén presentes
+    if (!id_combate || !id_ganador || score1 === undefined || score2 === undefined) {
+        return response.status(400).json({
+            statusCode: 400,
+            message: "Faltan parámetros necesarios para registrar el ganador."
+        });
+    }
+
     // Obtener detalles del combate actual
     connection.query("SELECT round, id_categoria, ganador FROM combate WHERE id_combate = ?", [id_combate], (error, combateActual) => {
         if (error || combateActual.length === 0) {
-            return response.sendResponse({
+            return response.status(500).json({
                 statusCode: 500,
-                message: "Error al obtener el combate o combate no encontrado",
-                error: error ? error.message : "Combate no encontrado"
+                message: "Error al obtener el combate o combate no encontrado.",
+                error: error ? error.message : "Combate no encontrado."
             });
         }
 
@@ -445,18 +453,18 @@ const registrarGanador = (request, response) => {
 
         // Verificar si ya se ha asignado un ganador
         if (ganador !== null) {
-            return response.sendResponse({
+            return response.status(400).json({
                 statusCode: 400,
-                message: "Este combate ya tiene un ganador asignado",
+                message: "Este combate ya tiene un ganador asignado."
             });
         }
 
         // Actualizar el ganador en el combate actual
         connection.query("UPDATE combate SET ganador = ?, score1 = ?, score2 = ? WHERE id_combate = ?", [id_ganador, score1, score2, id_combate], (error) => {
             if (error) {
-                return response.sendResponse({
+                return response.status(500).json({
                     statusCode: 500,
-                    message: "Error al registrar el ganador",
+                    message: "Error al registrar el ganador.",
                     error: error.message
                 });
             }
@@ -471,10 +479,18 @@ const registrarGanador = (request, response) => {
                 ORDER BY id_combate ASC
                 LIMIT 1
             `, [id_categoria, round + 1], (error, combateSiguiente) => {
-                if (error || combateSiguiente.length === 0) {
-                    return response.sendResponse({
+                if (error) {
+                    return response.status(500).json({
+                        statusCode: 500,
+                        message: "Error al obtener el siguiente combate.",
+                        error: error.message
+                    });
+                }
+
+                if (combateSiguiente.length === 0) {
+                    return response.status(200).json({
                         statusCode: 200,
-                        message: "Ganador registrado con éxito, no hay más combates en esta categoría",
+                        message: "Ganador registrado con éxito, no hay más combates en esta categoría."
                     });
                 }
 
@@ -482,10 +498,7 @@ const registrarGanador = (request, response) => {
                 const { id_combate: idCombateSiguiente, id_jugador_1, id_jugador_2 } = siguienteCombate;
 
                 // Determinar en qué posición debe colocarse el ganador
-                let campoAActualizar = 'id_jugador_1';
-                if (id_jugador_1 !== null) {
-                    campoAActualizar = 'id_jugador_2';
-                }
+                let campoAActualizar = id_jugador_1 === null ? 'id_jugador_1' : 'id_jugador_2';
 
                 // Asignar el ganador al siguiente combate
                 connection.query(`
@@ -494,22 +507,23 @@ const registrarGanador = (request, response) => {
                     WHERE id_combate = ?
                 `, [id_ganador, idCombateSiguiente], (error) => {
                     if (error) {
-                        return response.sendResponse({
+                        return response.status(500).json({
                             statusCode: 500,
-                            message: "Error al avanzar el ganador al siguiente combate",
+                            message: "Error al avanzar el ganador al siguiente combate.",
                             error: error.message
                         });
                     }
 
-                    response.sendResponse({
+                    response.status(200).json({
                         statusCode: 200,
-                        message: "Ganador registrado y avanzado con éxito al siguiente combate",
+                        message: "Ganador registrado y avanzado con éxito al siguiente combate."
                     });
                 });
             });
         });
     });
 };
+
 
 const inscribirDeportistaYCombate = (request, response) => {
     const { nombre, apellido, sexo, peso, club, departamento, ciudad, entrenador, numeroasistencia, nacimiento, eps, hospedaje, id_categorias } = request.body;
