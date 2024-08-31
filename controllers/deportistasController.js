@@ -3,8 +3,7 @@ const { connection } = require("../db.js");
 const getDeportistas = (request, response) => {
     const query = `
         SELECT 
-            d.id_deportista,
-            d.nombre,
+            d.*,
             IF(cc.id_categoriac IS NOT NULL, 'combate', 'poomsae') AS modalidad,
             GROUP_CONCAT(DISTINCT CONCAT('"', IFNULL(cc.nombre, cp.nombre), '"') SEPARATOR ',') AS categorias
         FROM 
@@ -398,7 +397,7 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
                             console.error("Error al registrar los combates para categoría:", id_categoriac, error.message);
                         }
 
-                        categoriasProcesadas++;
+                        categoriasProcesadas++; 
 
                         if (categoriasProcesadas === totalCategorias) {
                             response.sendResponse({
