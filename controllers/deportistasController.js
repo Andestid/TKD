@@ -55,7 +55,23 @@ const deleteDeportistas = async (request, response) => {
     const { id_deportista } = request.body;
 
     try {
-        // Primero, elimina de rondas_poomsae (dependencias)
+        // Primero, elimina de la tabla combate donde el deportista es jugador 1
+        await new Promise((resolve, reject) => {
+            connection.query("DELETE FROM combate WHERE id_jugador_1 = ?", [id_deportista], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+
+        // Luego, elimina de la tabla combate donde el deportista es jugador 2
+        await new Promise((resolve, reject) => {
+            connection.query("DELETE FROM combate WHERE id_jugador_2 = ?", [id_deportista], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+
+        // Eliminar de rondas_poomsae (dependencias)
         await new Promise((resolve, reject) => {
             connection.query("DELETE FROM rondas_poomsae WHERE id_deportista = ?", [id_deportista], (error, results) => {
                 if (error) return reject(error);
@@ -63,7 +79,7 @@ const deleteDeportistas = async (request, response) => {
             });
         });
 
-        // Luego, elimina de inscritos_combate
+        // Eliminar de inscritos_combate
         await new Promise((resolve, reject) => {
             connection.query("DELETE FROM inscritos_combate WHERE id_deportista = ?", [id_deportista], (error, results) => {
                 if (error) return reject(error);
@@ -71,7 +87,7 @@ const deleteDeportistas = async (request, response) => {
             });
         });
 
-        // Luego, elimina de inscritos_poomsae
+        // Eliminar de inscritos_poomsae
         await new Promise((resolve, reject) => {
             connection.query("DELETE FROM inscritos_poomsae WHERE id_deportista = ?", [id_deportista], (error, results) => {
                 if (error) return reject(error);
