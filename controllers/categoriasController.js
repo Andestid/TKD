@@ -73,10 +73,17 @@ const getBracketsCategoria = (request, response) => {
                     });
                 }
 
+                function calculateRoundId(numParticipantes) {
+                    // Ajusta los tamaños según tus necesidades
+                    const tamaños = [2, 4, 8, 16, 32];
+                    const indice = tamaños.findIndex(t => numParticipantes <= t);
+                    return indice;
+                }
+
                 // Estructura del JSON ajustada a las interfaces
                 const jsonResponse = {
-                    participant: deportistas.map(deportista => ({
-                        id: deportista.id_deportista,
+                    participant: deportistas.map((deportista, index) => ({
+                        id: index,
                         tournament_id: id_categoria,
                         name: deportista.nombre
                     })),
@@ -101,34 +108,37 @@ const getBracketsCategoria = (request, response) => {
                         number: 1 // Puedes ajustar según la lógica que manejes
                     }],
                     round: combates.reduce((rounds, combate) => {
-                        const roundNumber = combate.round;
-                        if (!rounds.some(round => round.number === roundNumber)) {
-                            rounds.push({
-                                id: rounds.length,
-                                stage_id: 0,
-                                group_id: 0,
-                                number: roundNumber
-                            });
-                        }
+                        const roundId = calculateRoundId(deportistas.length);
+                        rounds.push({
+                            id: rounds.length,
+                            stage_id: 0,
+                            group_id: 0,
+                            number: roundId
+                        });
                         return rounds;
                     }, []),
-                    match: combates.map((combate, index) => ({
-                        id: combate.id_combate,
-                        stage_id: 0,
-                        group_id: 0,
-                        round_id: combate.round, 
-                        number: index + 1,
-                        child_count: 0,
-                        status: combate.id_jugador_1 && combate.id_jugador_2 ? 2 : 0,
-                        opponent1: {
-                            id: combate.id_jugador_1,
-                            position: 1
-                        },
-                        opponent2: {
-                            id: combate.id_jugador_2,
-                            position: 2
-                        }
-                    })),
+                    match: combates.map((combate, index) => {
+                        const participanteIndex1 = deportistas.findIndex(d => d.id_deportista === combate.id_jugador_1);
+                        const participanteIndex2 = deportistas.findIndex(d => d.id_deportista === combate.id_jugador_2);
+    
+                        return {
+                            id: index,
+                            stage_id: 0,
+                            group_id: 0,
+                            round_id: calculateRoundId(deportistas.length),
+                            number: index % deportistas.length, // Número de match dentro del round
+                            child_count: 0,
+                            status: 5,
+                            opponent1: {
+                                id: combate.id_jugador_1,
+                                position: participanteIndex1
+                            },
+                            opponent2: {
+                                id: combate.id_jugador_2,
+                                position: participanteIndex2
+                            }
+                        };
+                    }),
                     match_game: [] // Si tienes sub-partidos, puedes manejarlos aquí
                 };
 
