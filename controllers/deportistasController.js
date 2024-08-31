@@ -439,58 +439,6 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
         });
     });
 };
-const generarBrackets = (request, response) => {
-    const { id_categoriac } = request.params;
-
-    connection.query("SELECT id_deportista FROM inscritos_combate WHERE id_categoriac = ?", [id_categoriac], (error, deportistas) => {
-        if (error) {
-            return response.sendResponse({
-                statusCode: 500,
-                message: "Error al generar brackets",
-                error: error.message
-            });
-        }
-
-        let num_deportistas = deportistas.length;
-        const totalRounds = Math.ceil(Math.log2(num_deportistas));
-        const totalCombates = Math.pow(2, totalRounds) - 1;
-
-        let combates = [];
-        let round = 1;
-
-        // Generar combates para la primera ronda
-        for (let i = 0; i < num_deportistas; i += 2) {
-            combates.push([round, id_categoriac, deportistas[i].id_deportista, (i + 1 < num_deportistas) ? deportistas[i + 1].id_deportista : null]);
-        }
-
-        // Generar combates para las rondas siguientes, sin asignar jugadores
-        while (round < totalRounds) {
-            round++;
-            const numCombates = Math.pow(2, totalRounds - round); // Combates en la ronda actual
-
-            for (let i = 0; i < numCombates; i++) {
-                combates.push([round, id_categoriac, null, null]);
-            }
-        }
-
-        // Insertar todos los combates en la base de datos
-        connection.query("INSERT INTO combate (round, id_categoria, id_jugador_1, id_jugador_2) VALUES ?", [combates], (error) => {
-            if (error) {
-                return response.sendResponse({
-                    statusCode: 500,
-                    message: "Error al registrar los combates",
-                    error: error.message
-                });
-            }
-
-            response.sendResponse({
-                statusCode: 200,
-                message: "Brackets generados con éxito",
-                data: deportistas
-            });
-        });
-    });
-};
 
 const registrarGanador = (request, response) => {
     const { id_combate, id_ganador, score1, score2 } = request.body;
@@ -1058,7 +1006,6 @@ module.exports = {
     inscribirCombate,
     inscribirPoomsae,
     verDeportistasPorCategoria,
-    generarBrackets,
     registrarGanador,
     inscribirDeportistaYCombate,
     inscribirDeportistaYPoomsae,

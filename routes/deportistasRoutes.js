@@ -4,7 +4,6 @@ const {
     getDeportistas,
     postDeportistas,
     verDeportistasPorCategoria,
-    generarBrackets,
     registrarGanador,
     inscribirDeportistaYCombate,
     inscribirDeportistaYPoomsae,
@@ -21,7 +20,6 @@ const {
 router.get('/torneo', getDeportistas);
 router.post('/torneo', postDeportistas);
 router.get('/categorias/:id_categoriac/deportistas', verDeportistasPorCategoria);
-router.post('/brackets/:id_categoriac', generarBrackets);
 router.post('/registrar_ganador', registrarGanador);
 router.post('/inscribirdeportistacombate',inscribirDeportistaYCombate);
 router.post('/inscribirdeportistapoomsae',inscribirDeportistaYPoomsae);
