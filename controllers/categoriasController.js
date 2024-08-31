@@ -82,31 +82,31 @@ const getBracketsCategoria = (request, response) => {
                     })),
                     stage: [
                         {
-                            id: 0,
-                            tournament_id: 0,
-                            name: "copa sunbae",
+                            id: 0, // Asignar ID correcto
+                            tournament_id: 0, // Asignar ID correcto
+                            name: categoria[0].nombre,
                             type: "single_elimination",
-                            number: 1,
+                            number: 1, // Asignar número según el torneo
                             settings: {
                                 seedOrdering: ["natural"],
                                 consolationFinal: true,
                                 size: deportistas.length,
-                                matchesChildCount: 0
+                                matchesChildCount: combates.length // Cantidad de combates en esta etapa
                             }
                         }
                     ],
                     group: [{
-                        id: 0,
-                        stage_id: 0,
-                        number: 1 // Puedes ajustar según la lógica que manejes
+                        id: 0, // Asignar ID correcto
+                        stage_id: 0, // Asignar el `stage_id` relacionado
+                        number: 1 // Asignar según la lógica del grupo
                     }],
                     round: combates.reduce((rounds, combate) => {
                         const roundNumber = combate.round;
                         if (!rounds.some(round => round.number === roundNumber)) {
                             rounds.push({
-                                id: rounds.length,
-                                stage_id: 0,
-                                group_id: 0,
+                                id: rounds.length, // Incremental para ser único
+                                stage_id: 0, // Asignar el `stage_id` relacionado
+                                group_id: 0, // Asignar el `group_id` relacionado
                                 number: roundNumber
                             });
                         }
@@ -114,12 +114,12 @@ const getBracketsCategoria = (request, response) => {
                     }, []),
                     match: combates.map((combate, index) => ({
                         id: combate.id_combate,
-                        stage_id: 0,
-                        group_id: 0,
-                        round_id: combate.round, 
-                        number: index + 1,
-                        child_count: 0,
-                        status: combate.id_jugador_1 && combate.id_jugador_2 ? 2 : 0,
+                        stage_id: 0, // Asignar el `stage_id` relacionado
+                        group_id: 0, // Asignar el `group_id` relacionado
+                        round_id: combate.round, // Asignar el `round_id` correspondiente
+                        number: index + 1, // Número del combate dentro de la ronda
+                        child_count: 0, // Puede ser ajustado si tienes sub-combates
+                        status: combate.id_jugador_1 && combate.id_jugador_2 ? 2 : 0, // Estado del combate
                         opponent1: {
                             id: combate.id_jugador_1,
                             position: 1
