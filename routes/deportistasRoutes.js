@@ -11,7 +11,10 @@ const {
     generarBracketsParaTodasLasCategorias,
     getTopFourPositionsForAllCategories,
     deleteDeportistas,
-    updateDeportista
+    updateDeportista,
+    generarRondasPoomsaeParaTodasLasCategorias,
+    verRondasPoomsaeParaTodasLasCategorias,
+    asignarPuntajePoomsae
     
 } = require('../controllers/deportistasController');
 
@@ -26,5 +29,8 @@ router.post('/brackets4all',generarBracketsParaTodasLasCategorias);
 router.post('/winners',getTopFourPositionsForAllCategories);
 router.post('/torneo/eliminar',deleteDeportistas);
 router.put('/torneo/editar',updateDeportista);
+router.post('/torneo/poomsae', generarRondasPoomsaeParaTodasLasCategorias);
+router.post('/torneo/rondas',verRondasPoomsaeParaTodasLasCategorias);
+router.post('/torneo/puntaje',asignarPuntajePoomsae);
 
 module.exports = router;

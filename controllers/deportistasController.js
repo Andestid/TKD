@@ -693,6 +693,228 @@ const inscribirDeportistaYPoomsae = (request, response) => {
     });
 };
 
+const generarRondasPoomsaeParaTodasLasCategorias = (request, response) => {
+    connection.beginTransaction((err) => {
+        if (err) {
+            return response.status(500).json({
+                message: "Error al iniciar la transacción",
+                error: err.message
+            });
+        }
+
+        // Elimina las rondas anteriores para evitar duplicados
+        connection.query(
+            "DELETE FROM rondas_poomsae",
+            (error, results) => {
+                if (error) {
+                    return connection.rollback(() => {
+                        response.status(500).json({
+                            message: "Error al eliminar rondas anteriores",
+                            error: error.message
+                        });
+                    });
+                }
+
+                // Obtiene todas las categorías con inscritos
+                connection.query(
+                    "SELECT DISTINCT id_categoriap FROM inscritos_poomsae",
+                    (error, results) => {
+                        if (error) {
+                            return connection.rollback(() => {
+                                response.status(500).json({
+                                    message: "Error al obtener las categorías",
+                                    error: error.message
+                                });
+                            });
+                        }
+
+                        const categorias = results.map(row => row.id_categoriap);
+
+                        const categoriaQueries = categorias.map((id_categoriap) => {
+                            return new Promise((resolve, reject) => {
+                                connection.query(
+                                    "SELECT id_deportista FROM inscritos_poomsae WHERE id_categoriap = ?",
+                                    [id_categoriap],
+                                    (error, results) => {
+                                        if (error) {
+                                            return reject(error);
+                                        }
+
+                                        const deportistas = results.map(row => row.id_deportista);
+
+                                        const insertQueries = deportistas.map((id_deportista) => {
+                                            return new Promise((resolve, reject) => {
+                                                connection.query(
+                                                    "INSERT INTO rondas_poomsae (id_deportista, id_categoriap, puntaje, puntaje2) VALUES (?, ?, NULL, NULL)",
+                                                    [id_deportista, id_categoriap],
+                                                    (error, results) => {
+                                                        if (error) {
+                                                            return reject(error);
+                                                        }
+                                                        resolve(results);
+                                                    }
+                                                );
+                                            });
+                                        });
+
+                                        Promise.all(insertQueries)
+                                            .then(resolve)
+                                            .catch(reject);
+                                    }
+                                );
+                            });
+                        });
+
+                        Promise.all(categoriaQueries)
+                            .then(() => {
+                                connection.commit((err) => {
+                                    if (err) {
+                                        return connection.rollback(() => {
+                                            response.status(500).json({
+                                                message: "Error al finalizar la transacción",
+                                                error: err.message
+                                            });
+                                        });
+                                    }
+
+                                    response.status(200).json({
+                                        message: "Rondas generadas con éxito para todas las categorías"
+                                    });
+                                });
+                            })
+                            .catch((error) => {
+                                connection.rollback(() => {
+                                    response.status(500).json({
+                                        message: "Error al generar las rondas",
+                                        error: error.message
+                                    });
+                                });
+                            });
+                    }
+                );
+            }
+        );
+    });
+};
+
+const verRondasPoomsaeParaTodasLasCategorias = (request, response) => {
+    let sql = `
+        SELECT 
+            rp.id_deportista,
+            d.nombre,
+            d.apellido,
+            rp.id_categoriap,
+            c.nombre,
+            rp.puntaje,
+            rp.puntaje2,
+            (rp.puntaje + COALESCE(rp.puntaje2, 0)) AS suma_puntajes,
+            CASE
+                WHEN rp.puntaje2 IS NOT NULL THEN
+                    (rp.puntaje + rp.puntaje2) / 2
+                ELSE
+                    rp.puntaje
+            END AS promedio_puntajes
+        FROM 
+            rondas_poomsae rp
+        INNER JOIN 
+            deportista d ON rp.id_deportista = d.id_deportista
+        INNER JOIN 
+            categorias_poomsae c ON rp.id_categoriap = c.id_categoriap
+    `;
+
+    sql += " ORDER BY rp.id_categoriap, d.apellido, d.nombre"; // Ordena por categoría, apellido y nombre
+
+    connection.query(sql, (error, results) => {
+        if (error) {
+            return response.status(500).json({
+                message: "Error al obtener las rondas de poomsae",
+                error: error.message
+            });
+        }
+
+        if (results.length === 0) {
+            return response.status(404).json({
+                message: "No se encontraron rondas de poomsae"
+            });
+        }
+
+        // Agrupar los resultados por categoría
+        const groupedResults = results.reduce((acc, row) => {
+            if (!acc[row.id_categoriap]) {
+                acc[row.id_categoriap] = {
+                    nombre_categoria: row.nombre_categoria,
+                    deportistas: []
+                };
+            }
+            acc[row.id_categoriap].deportistas.push({
+                id_deportista: row.id_deportista,
+                nombre: row.nombre,
+                apellido: row.apellido,
+                puntaje: row.puntaje,
+                puntaje2: row.puntaje2,
+                suma_puntajes: row.suma_puntajes,
+                promedio_puntajes: row.promedio_puntajes
+            });
+            return acc;
+        }, {});
+
+        // Construir el JSON final
+        const formattedResults = Object.keys(groupedResults).map(categoria => ({
+            id_categoriap: categoria,
+            nombre_categoria: groupedResults[categoria].nombre_categoria,
+            deportistas: groupedResults[categoria].deportistas
+        }));
+
+        response.status(200).json({
+            message: "Rondas de poomsae obtenidas con éxito",
+            data: formattedResults
+        });
+    });
+};
+
+const asignarPuntajePoomsae = (request, response) => {
+    const { id_deportista, id_categoriap, puntaje, puntaje2 } = request.body;
+
+    // Construye la consulta SQL dinámicamente según los puntajes proporcionados
+    let sql = "UPDATE rondas_poomsae SET ";
+    const params = [];
+    
+    if (puntaje !== undefined) {
+        sql += "puntaje = ?";
+        params.push(puntaje);
+    }
+
+    if (puntaje2 !== undefined) {
+        if (puntaje !== undefined) {
+            sql += ", ";
+        }
+        sql += "puntaje2 = ?";
+        params.push(puntaje2);
+    }
+
+    sql += " WHERE id_deportista = ? AND id_categoriap = ?";
+    params.push(id_deportista, id_categoriap);
+
+    connection.query(sql, params, (error, results) => {
+        if (error) {
+            return response.status(500).json({
+                message: "Error al asignar puntaje",
+                error: error.message
+            });
+        }
+
+        if (results.affectedRows === 0) {
+            return response.status(404).json({
+                message: "No se encontró el registro del deportista en la categoría especificada"
+            });
+        }
+
+        response.status(200).json({
+            message: "Puntaje(s) asignado(s) con éxito"
+        });
+    });
+};
+
 const getTopFourPositionsForAllCategories = (request, response) => {
     // Obtener todas las categorías con su nombre
     connection.query('SELECT DISTINCT c.id_categoria, cat.nombre FROM combate c JOIN categorias_combate cat ON c.id_categoria = cat.id_categoriac', (error, categories) => {
@@ -815,5 +1037,8 @@ module.exports = {
     generarBracketsParaTodasLasCategorias,
     getTopFourPositionsForAllCategories,
     deleteDeportistas,
-    updateDeportista
+    updateDeportista,
+    generarRondasPoomsaeParaTodasLasCategorias,
+    verRondasPoomsaeParaTodasLasCategorias,
+    asignarPuntajePoomsae
 };
