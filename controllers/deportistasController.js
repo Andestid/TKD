@@ -373,38 +373,28 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
                         return;
                     }
 
-                    const totalRounds = Math.ceil(Math.log2(num_deportistas));
+                    // Redondeo del número de deportistas al tamaño de bracket más cercano (2, 4, 8, 16, etc.)
+                    let size = 2;
+                    while (size < num_deportistas) size *= 2;
+
+                    const totalRounds = Math.log2(size);
                     let combates = [];
                     let round = 1;
+                    let nextRoundParticipants = deportistas.map(d => d.id_deportista);
 
-                    // Generar combates para la primera ronda
-                    let ganadoresPrimeraRonda = [];
-
-                    for (let i = 0; i < num_deportistas - 1; i += 2) {
-                        combates.push([round, id_categoriac, deportistas[i].id_deportista, (i + 1 < num_deportistas) ? deportistas[i + 1].id_deportista : null]);
-                        ganadoresPrimeraRonda.push(null); // Lugar para los ganadores de la primera ronda
-                    }
-
-                    // Manejo de competidor que recibe un 'bye'
-                    if (num_deportistas % 2 !== 0) {
-                        const byeParticipant = deportistas[num_deportistas - 1].id_deportista;
-                        ganadoresPrimeraRonda.push(byeParticipant); // Este participante va directamente a la segunda ronda
-                    }
-
-                    // Generar combates para la segunda ronda (round + 1)
-                    round++;
-                    for (let i = 0; i < ganadoresPrimeraRonda.length; i += 2) {
-                        combates.push([round, id_categoriac, ganadoresPrimeraRonda[i], (i + 1 < ganadoresPrimeraRonda.length) ? ganadoresPrimeraRonda[i + 1] : null]);
-                    }
-
-                    // Generar combates para rondas adicionales si son necesarias
-                    while (round < totalRounds) {
-                        round++;
-                        const numCombates = Math.pow(2, totalRounds - round);
-
+                    // Generar todos los combates para todas las rondas
+                    for (round = 1; round <= totalRounds; round++) {
+                        let roundCombates = [];
+                        const numCombates = size / Math.pow(2, round);
+                        
                         for (let i = 0; i < numCombates; i++) {
-                            combates.push([round, id_categoriac, null, null]);
+                            const player1 = nextRoundParticipants[i * 2] || null;
+                            const player2 = nextRoundParticipants[i * 2 + 1] || null;
+                            roundCombates.push([round, id_categoriac, player1, player2]);
                         }
+
+                        combates = combates.concat(roundCombates);
+                        nextRoundParticipants = roundCombates.map(c => null); // Los ganadores aún no se conocen
                     }
 
                     if (combates.length === 0) {
@@ -418,14 +408,12 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
                         return;
                     }
 
-                    console.log("Consulta SQL de inserción:", "INSERT INTO combate (round, id_categoria, id_jugador_1, id_jugador_2) VALUES ?", [combates]);
-
                     connection.query("INSERT INTO combate (round, id_categoria, id_jugador_1, id_jugador_2) VALUES ?", [combates], (error) => {
                         if (error) {
                             console.error("Error al registrar los combates para categoría:", id_categoriac, error.message);
                         }
 
-                        categoriasProcesadas++; 
+                        categoriasProcesadas++;
 
                         if (categoriasProcesadas === totalCategorias) {
                             response.sendResponse({
