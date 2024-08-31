@@ -51,43 +51,55 @@ const getDeportistas = (request, response) => {
     });
 };
 
-const deleteDeportistas = (request, response) => {
+const deleteDeportistas = async (request, response) => {
     const { id_deportista } = request.body;
-    connection.query("DELETE FROM inscritos_combate WHERE id_deportista = ?", [id_deportista], (error, results) => {
-        if (error) {
-            response.send({
-                statusCode: 500,
-                message: "Error al eliminar los registros de inscritos_combate",
-                error: error.message
+
+    try {
+        // Primero, elimina de rondas_poomsae (dependencias)
+        await new Promise((resolve, reject) => {
+            connection.query("DELETE FROM rondas_poomsae WHERE id_deportista = ?", [id_deportista], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
             });
-        } else {
+        });
+
+        // Luego, elimina de inscritos_combate
+        await new Promise((resolve, reject) => {
+            connection.query("DELETE FROM inscritos_combate WHERE id_deportista = ?", [id_deportista], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+
+        // Luego, elimina de inscritos_poomsae
+        await new Promise((resolve, reject) => {
             connection.query("DELETE FROM inscritos_poomsae WHERE id_deportista = ?", [id_deportista], (error, results) => {
-                if (error) {
-                    response.send({
-                        statusCode: 500,
-                        message: "Error al eliminar los registros de inscritos_poomsae",
-                        error: error.message
-                    });
-                } else {
-                    connection.query("DELETE FROM deportista WHERE id_deportista = ?", [id_deportista], (error, results) => {
-                        if (error) {
-                            response.send({
-                                statusCode: 500,
-                                message: "Error al eliminar deportista",
-                                error: error.message
-                            });
-                        } else {
-                            response.send({
-                                statusCode: 200,
-                                message: "Deportista eliminado con éxito",
-                                data: results
-                            });
-                        }
-                    });
-                }
+                if (error) return reject(error);
+                resolve(results);
             });
-        }
-    });
+        });
+
+        // Finalmente, elimina el deportista
+        const resultsDeportista = await new Promise((resolve, reject) => {
+            connection.query("DELETE FROM deportista WHERE id_deportista = ?", [id_deportista], (error, results) => {
+                if (error) return reject(error);
+                resolve(results);
+            });
+        });
+
+        // Respuesta exitosa
+        response.send({
+            statusCode: 200,
+            message: "Deportista eliminado con éxito",
+            data: resultsDeportista
+        });
+    } catch (error) {
+        response.send({
+            statusCode: 500,
+            message: "Error al eliminar el deportista",
+            error: error.message
+        });
+    }
 };
 
 const updateDeportista = (request, response) => {
