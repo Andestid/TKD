@@ -73,7 +73,7 @@ const getBracketsCategoria = (request, response) => {
                     });
                 }
 
-                // Calcular tamaño y redondeo
+                // Calcular tamaño y redondeo hacia arriba
                 let num_deportistas = deportistas.length;
                 if (num_deportistas === 0) {
                     return response.status(400).json({
@@ -83,7 +83,7 @@ const getBracketsCategoria = (request, response) => {
                 }
 
                 const sizes = [2, 4, 8, 16, 32];
-                const size = sizes.reduce((prev, curr) => Math.abs(curr - num_deportistas) < Math.abs(prev - num_deportistas) ? curr : prev);
+                const size = sizes.find(s => s >= num_deportistas) || sizes[sizes.length - 1];
                 const totalRounds = Math.ceil(Math.log2(size));
 
                 // Crear un mapa para buscar deportistas rápidamente
