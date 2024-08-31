@@ -126,7 +126,19 @@ const getBracketsCategoria = (request, response) => {
                     })),
                     match: combates.map((combate, index) => {
                         const roundId = combate.round - 1; // Asegúrate de que `combate.round` esté en base 1
-                        const isFirstRound = roundId === 0;
+                        const score1 = combate.score1;
+                        const score2 = combate.score2;
+
+                        const getResult = (score1, score2) => {
+                            if (score1 === null || score2 === null) return null;
+                            if (score1 > score2) return 'win';
+                            if (score1 < score2) return 'loss';
+                            return 'draw';
+                        };
+
+                        const result1 = getResult(score1, score2);
+                        const result2 = result1 === 'win' ? 'loss' : (result1 === 'loss' ? 'win' : null);
+
                         const matchEntry = {
                             id: index,
                             stage_id: 0,
@@ -138,11 +150,15 @@ const getBracketsCategoria = (request, response) => {
                             status: 5,
                             opponent1: {
                                 id: deportistasMap[combate.id_jugador_1] !== undefined ? deportistasMap[combate.id_jugador_1] : null,
-                                ...(isFirstRound ? { position: combate.id_jugador_1 } : {})
+                                ...(roundId === 0 ? { position: combate.id_jugador_1 } : {}),
+                                score: score1,
+                                result: result1
                             },
                             opponent2: {
                                 id: deportistasMap[combate.id_jugador_2] !== undefined ? deportistasMap[combate.id_jugador_2] : null,
-                                ...(isFirstRound ? { position: combate.id_jugador_2 } : {})
+                                ...(roundId === 0 ? { position: combate.id_jugador_2 } : {}),
+                                score: score2,
+                                result: result2
                             }
                         };
                         return matchEntry;
@@ -162,6 +178,7 @@ const getBracketsCategoria = (request, response) => {
         });
     });
 };
+
 
 
 module.exports = {
