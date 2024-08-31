@@ -3,9 +3,10 @@ const { connection } = require("../db.js");
 const getDeportistas = (request, response) => {
     const query = `
         SELECT 
-            d.*, 
+            d.id_deportista,
+            d.nombre,
             IF(cc.id_categoriac IS NOT NULL, 'combate', 'poomsae') AS modalidad,
-            GROUP_CONCAT(IFNULL(cc.nombre, cp.nombre)) AS categorias
+            GROUP_CONCAT(DISTINCT CONCAT('"', IFNULL(cc.nombre, cp.nombre), '"') SEPARATOR ',') AS categorias
         FROM 
             deportista d
         LEFT JOIN 
@@ -28,11 +29,25 @@ const getDeportistas = (request, response) => {
                 error: error.message
             });
         } else {
-            response.sendResponse({
-                statusCode: 200,
-                message: "Deportistas obtenidos con éxito",
-                data: results
-            });
+            try {
+                // Transformar la cadena en un array JSON
+                const data = results.map(row => ({
+                    ...row,
+                    categorias: JSON.parse(`[${row.categorias}]`)
+                }));
+
+                response.sendResponse({
+                    statusCode: 200,
+                    message: "Deportistas obtenidos con éxito",
+                    data
+                });
+            } catch (jsonError) {
+                response.sendResponse({
+                    statusCode: 500,
+                    message: "Error al procesar los datos de categorías",
+                    error: jsonError.message
+                });
+            }
         }
     });
 };
