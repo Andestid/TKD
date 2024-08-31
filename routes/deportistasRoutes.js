@@ -9,7 +9,7 @@ const {
     inscribirDeportistaYCombate,
     inscribirDeportistaYPoomsae,
     generarBracketsParaTodasLasCategorias,
-    getTopFourPositions,
+    getTopFourPositionsForAllCategories,
     deleteDeportistas,
     updateDeportista
     
@@ -23,7 +23,7 @@ router.post('/registrar_ganador', registrarGanador);
 router.post('/inscribirdeportistacombate',inscribirDeportistaYCombate);
 router.post('/inscribirdeportistapoomsae',inscribirDeportistaYPoomsae);
 router.post('/brackets4all',generarBracketsParaTodasLasCategorias);
-router.post('/winners/:id_categoriac',getTopFourPositions);
+router.post('/winners',getTopFourPositionsForAllCategories);
 router.post('/torneo/eliminar',deleteDeportistas);
 router.put('/torneo/editar',updateDeportista);
 

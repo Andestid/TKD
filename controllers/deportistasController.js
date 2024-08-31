@@ -693,59 +693,123 @@ const inscribirDeportistaYPoomsae = (request, response) => {
     });
 };
 
-const getTopFourPositions = (request, response) => {
-    const { id_categoriac } = request.params;
-
-    // Obtener los combates de la categoría en orden descendente de rondas
-    connection.query(`
-        SELECT * FROM combate 
-        WHERE id_categoria = ? 
-        ORDER BY round DESC
-    `, [id_categoriac], (error, combates) => {
+const getTopFourPositionsForAllCategories = (request, response) => {
+    // Obtener todas las categorías
+    connection.query('SELECT DISTINCT id_categoria FROM combate', (error, categories) => {
         if (error) {
             return response.status(500).json({
                 statusCode: 500,
-                message: "Error al obtener los combates",
+                message: "Error al obtener las categorías",
                 error: error.message
             });
         }
 
-        if (combates.length === 0) {
+        if (categories.length === 0) {
             return response.status(404).json({
                 statusCode: 404,
-                message: "No se encontraron combates para esta categoría"
+                message: "No se encontraron categorías"
             });
         }
 
-        // Identificar el ganador del último combate (final)
-        const finalMatch = combates[0];
-        const winner = finalMatch.ganador;
-        const secondPlace = (finalMatch.id_jugador_1 === winner) ? finalMatch.id_jugador_2 : finalMatch.id_jugador_1;
+        // Función para obtener nombres de deportistas
+        const getPlayerNames = (playerIds, callback) => {
+            if (playerIds.length === 0) {
+                return callback(null, {});
+            }
 
-        // Identificar a los dos perdedores de las semifinales
-        const semiFinalMatches = combates.filter(c => c.round === finalMatch.round - 1);
-        const semiFinalLosers = semiFinalMatches.map(match => 
-            (match.id_jugador_1 === match.ganador) ? match.id_jugador_2 : match.id_jugador_1
-        );
+            const placeholders = playerIds.map(() => '?').join(',');
+            connection.query(`
+                SELECT id_deportista, nombre 
+                FROM deportista 
+                WHERE id_deportista IN (${placeholders})
+            `, playerIds, (error, players) => {
+                if (error) {
+                    return callback(error);
+                }
 
-        // Verificar si hay menos de dos semifinalistas
-        const third = semiFinalLosers[0] || null;
-        const fourth = semiFinalLosers[1] || null;
+                const names = {};
+                players.forEach(player => {
+                    names[player.id_deportista] = player.nombre;
+                });
 
-        // Crear la estructura del JSON para las posiciones
-        const topFour = {
-            first: winner,
-            second: secondPlace,
-            third: third,
-            fourth: fourth
+                callback(null, names);
+            });
         };
 
-        // Enviar la respuesta en formato JSON
-        response.status(200).json({
-            statusCode: 200,
-            message: "Top 4 posiciones obtenidas con éxito",
-            data: topFour
-        });
+        // Función para procesar los combates de una categoría
+        const getPositionsForCategory = (id_categoriac, callback) => {
+            connection.query(`
+                SELECT * FROM combate 
+                WHERE id_categoria = ? 
+                ORDER BY round DESC
+            `, [id_categoriac], (error, combates) => {
+                if (error) {
+                    return callback(error);
+                }
+
+                if (combates.length === 0) {
+                    return callback(null, { id_categoria: id_categoriac, topFour: null });
+                }
+
+                // Identificar el ganador del último combate (final)
+                const finalMatch = combates[0];
+                const winner = finalMatch.ganador;
+                const secondPlace = (finalMatch.id_jugador_1 === winner) ? finalMatch.id_jugador_2 : finalMatch.id_jugador_1;
+
+                // Identificar a los dos perdedores de las semifinales
+                const semiFinalMatches = combates.filter(c => c.round === finalMatch.round - 1);
+                const semiFinalLosers = semiFinalMatches.map(match => 
+                    (match.id_jugador_1 === match.ganador) ? match.id_jugador_2 : match.id_jugador_1
+                );
+
+                // Obtener los nombres de los jugadores
+                const playerIds = [winner, secondPlace, ...semiFinalLosers];
+                getPlayerNames(playerIds, (error, names) => {
+                    if (error) {
+                        return callback(error);
+                    }
+
+                    // Crear la estructura del JSON para las posiciones
+                    const topFour = {
+                        first: { id: winner, name: names[winner] || 'Desconocido' },
+                        second: { id: secondPlace, name: names[secondPlace] || 'Desconocido' },
+                        third: semiFinalLosers[0] ? { id: semiFinalLosers[0], name: names[semiFinalLosers[0]] || 'Desconocido' } : null,
+                        fourth: semiFinalLosers[1] ? { id: semiFinalLosers[1], name: names[semiFinalLosers[1]] || 'Desconocido' } : null
+                    };
+
+                    callback(null, { id_categoria: id_categoriac, topFour });
+                });
+            });
+        };
+
+        // Procesar todas las categorías
+        const processCategoryPositions = (index) => {
+            if (index >= categories.length) {
+                return response.status(200).json({
+                    statusCode: 200,
+                    message: "Top 4 posiciones obtenidas con éxito para todas las categorías",
+                    data: positions
+                });
+            }
+
+            const category = categories[index];
+            getPositionsForCategory(category.id_categoria, (error, result) => {
+                if (error) {
+                    return response.status(500).json({
+                        statusCode: 500,
+                        message: "Error al procesar la categoría",
+                        error: error.message
+                    });
+                }
+
+                positions.push(result);
+                processCategoryPositions(index + 1);
+            });
+        };
+
+        // Inicializar el array para almacenar las posiciones
+        const positions = [];
+        processCategoryPositions(0);
     });
 };
 
@@ -760,7 +824,7 @@ module.exports = {
     inscribirDeportistaYCombate,
     inscribirDeportistaYPoomsae,
     generarBracketsParaTodasLasCategorias,
-    getTopFourPositions,
+    getTopFourPositionsForAllCategories,
     deleteDeportistas,
     updateDeportista
 };
