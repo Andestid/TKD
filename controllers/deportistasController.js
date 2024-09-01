@@ -779,10 +779,10 @@ const verRondasPoomsaeParaTodasLasCategorias = (request, response) => {
     let sql = `
         SELECT 
             rp.id_deportista,
-            d.nombre,
-            d.apellido,
+            d.nombre AS nombre_deportista,
+            d.apellido AS apellido_deportista,
             rp.id_categoriap,
-            c.nombre,
+            c.nombre AS nombre_categoria,
             rp.puntaje,
             rp.puntaje2,
             (rp.puntaje + COALESCE(rp.puntaje2, 0)) AS suma_puntajes,
@@ -818,16 +818,15 @@ const verRondasPoomsaeParaTodasLasCategorias = (request, response) => {
 
         // Agrupar los resultados por categoría
         const groupedResults = results.reduce((acc, row) => {
-            if (!acc[row.id_categoriap]) {
-                acc[row.id_categoriap] = {
+            if (!acc[row.nombre_categoria]) {
+                acc[row.nombre_categoria] = {
                     nombre_categoria: row.nombre_categoria,
                     deportistas: []
                 };
             }
-            acc[row.id_categoriap].deportistas.push({
+            acc[row.nombre_categoria].deportistas.push({
                 id_deportista: row.id_deportista,
-                nombre: row.nombre,
-                apellido: row.apellido,
+                nombre_completo: `${row.nombre_deportista} ${row.apellido_deportista}`,
                 puntaje: row.puntaje,
                 puntaje2: row.puntaje2,
                 suma_puntajes: row.suma_puntajes,
@@ -838,8 +837,7 @@ const verRondasPoomsaeParaTodasLasCategorias = (request, response) => {
 
         // Construir el JSON final
         const formattedResults = Object.keys(groupedResults).map(categoria => ({
-            id_categoriap: categoria,
-            nombre_categoria: groupedResults[categoria].nombre_categoria,
+            nombre_categoria: categoria,
             deportistas: groupedResults[categoria].deportistas
         }));
 
@@ -849,6 +847,7 @@ const verRondasPoomsaeParaTodasLasCategorias = (request, response) => {
         });
     });
 };
+
 
 const asignarPuntajePoomsae = (request, response) => {
     const { id_deportista, id_categoriap, puntaje, puntaje2 } = request.body;
