@@ -92,6 +92,8 @@ const getBracketsCategoria = (request, response) => {
                 }, {});
 
                 // Ajustar combates
+                let roundMatchNumbers = {}; // Objeto para almacenar el número de combate por ronda
+
                 const jsonResponse = {
                     participant: deportistas.map((deportista, index) => ({
                         id: index,
@@ -139,13 +141,18 @@ const getBracketsCategoria = (request, response) => {
                         const result1 = getResult(score1, score2);
                         const result2 = result1 === 'win' ? 'loss' : (result1 === 'loss' ? 'win' : null);
 
+                        // Si no existe el round en el objeto, lo inicializamos
+                        if (!roundMatchNumbers[roundId]) {
+                            roundMatchNumbers[roundId] = 1; // Inicia el contador para este round
+                        }
+
                         const matchEntry = {
                             id: index,
                             stage_id: 0,
                             group_id: 0,
                             round_id: roundId,
                             iddelcombate: combate.id_combate,
-                            number: (index % 2) + 1, // Ajusta el número de match por round
+                            number: roundMatchNumbers[roundId]++, // Incrementa el número de match por combate dentro del round actual
                             child_count: 0,
                             status: 5,
                             opponent1: {
@@ -178,6 +185,7 @@ const getBracketsCategoria = (request, response) => {
         });
     });
 };
+
 
 
 
