@@ -818,13 +818,14 @@ const verRondasPoomsaeParaTodasLasCategorias = (request, response) => {
 
         // Agrupar los resultados por categoría
         const groupedResults = results.reduce((acc, row) => {
-            if (!acc[row.nombre_categoria]) {
-                acc[row.nombre_categoria] = {
+            if (!acc[row.id_categoriap]) {
+                acc[row.id_categoriap] = {
+                    id_categoriap: row.id_categoriap,
                     nombre_categoria: row.nombre_categoria,
                     deportistas: []
                 };
             }
-            acc[row.nombre_categoria].deportistas.push({
+            acc[row.id_categoriap].deportistas.push({
                 id_deportista: row.id_deportista,
                 nombre_completo: `${row.nombre_deportista} ${row.apellido_deportista}`,
                 puntaje: row.puntaje,
@@ -836,9 +837,10 @@ const verRondasPoomsaeParaTodasLasCategorias = (request, response) => {
         }, {});
 
         // Construir el JSON final
-        const formattedResults = Object.keys(groupedResults).map(categoria => ({
-            nombre_categoria: categoria,
-            deportistas: groupedResults[categoria].deportistas
+        const formattedResults = Object.keys(groupedResults).map(id_categoria => ({
+            id_categoriap: groupedResults[id_categoria].id_categoriap,
+            nombre_categoria: groupedResults[id_categoria].nombre_categoria,
+            deportistas: groupedResults[id_categoria].deportistas
         }));
 
         response.status(200).json({
@@ -847,6 +849,7 @@ const verRondasPoomsaeParaTodasLasCategorias = (request, response) => {
         });
     });
 };
+
 
 
 const asignarPuntajePoomsae = (request, response) => {
