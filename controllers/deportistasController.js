@@ -385,11 +385,20 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
                     let round = 1;
                     let nextRoundParticipants = deportistas.map(d => d.id_deportista);
 
+                    // Calcular el número de byes necesarios
+                    const byes = size - num_deportistas;
+
+                    // Insertar los byes de forma equitativa en la primera ronda
+                    for (let i = 0; i < byes; i++) {
+                        const pos = (i * 2) % nextRoundParticipants.length; // Distribuir alternadamente
+                        nextRoundParticipants.splice(pos, 0, null); // Insertar un bye (null representa un bye)
+                    }
+
                     // Generar todos los combates para todas las rondas
                     for (round = 1; round <= totalRounds; round++) {
                         let roundCombates = [];
                         const numCombates = size / Math.pow(2, round);
-                        
+
                         for (let i = 0; i < numCombates; i++) {
                             const player1 = nextRoundParticipants[i * 2] || null;
                             const player2 = nextRoundParticipants[i * 2 + 1] || null;
@@ -430,6 +439,7 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
         });
     });
 };
+
 
 const registrarGanador = (request, response) => {
     const { id_combate, id_ganador, score1, score2 } = request.body;
@@ -930,11 +940,25 @@ const getTopFourPositionsForAllCategories = (request, response) => {
         };
 
         // Función para procesar los combates de una categoría
-        const getPositionsForCategory = (id_categoriac, categoryName) => {
+        const getPositionsForCategory = async (id_categoriac, categoryName) => {
             return new Promise((resolve, reject) => {
                 connection.query("SELECT * FROM combate WHERE id_categoria = ? ORDER BY round DESC", [id_categoriac], async (error, combates) => {
                     if (error) {
                         return reject(error);
+                    }
+
+                    // Verificar si hay solo un deportista
+                    const uniquePlayers = new Set(combates.flatMap(match => [match.id_jugador_1, match.id_jugador_2]));
+                    if (uniquePlayers.size === 1) {
+                        const singlePlayerId = [...uniquePlayers][0];
+                        const playerName = await getDeportistaName(singlePlayerId);
+                        const topFour = [
+                            { id: singlePlayerId, nombre: playerName }, // Primero
+                            null, // Segundo
+                            null, // Tercero
+                            null  // Cuarto
+                        ];
+                        return resolve({ id_categoria: id_categoriac, nombre_categoria: categoryName, topFour });
                     }
 
                     if (combates.length === 0) {
@@ -948,13 +972,15 @@ const getTopFourPositionsForAllCategories = (request, response) => {
 
                     // Identificar a los dos perdedores de las semifinales
                     const semiFinalMatches = combates.filter(c => c.round === finalMatch.round - 1);
-                    const semiFinalLosers = semiFinalMatches.map(match => 
+                    let semiFinalLosers = semiFinalMatches.map(match => 
                         (match.id_jugador_1 === match.ganador) ? match.id_jugador_2 : match.id_jugador_1
                     );
 
-                    // Verificar si hay menos de dos semifinalistas
-                    const third = semiFinalLosers[0] || null;
-                    const fourth = semiFinalLosers[1] || null;
+                    // Asignar el tercer lugar al que perdió contra el campeón
+                    const third = semiFinalLosers.find(loser => combates.some(match => match.id_jugador_1 === loser && match.id_jugador_2 === winner || match.id_jugador_1 === winner && match.id_jugador_2 === loser)) || null;
+                    
+                    // Asignar el cuarto lugar al otro semifinalista
+                    const fourth = semiFinalLosers.find(loser => loser !== third) || null;
 
                     try {
                         // Obtener los nombres de los deportistas en paralelo

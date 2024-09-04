@@ -98,7 +98,8 @@ const getBracketsCategoria = (request, response) => {
                     participant: deportistas.map((deportista, index) => ({
                         id: index,
                         tournament_id: 0,
-                        name: deportista.nombre
+                        name: deportista.nombre,
+                        deportista_id: deportista.id_deportista 
                     })),
                     stage: [
                         {
