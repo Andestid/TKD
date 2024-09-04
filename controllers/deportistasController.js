@@ -373,6 +373,9 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
                         return;
                     }
 
+                    // Mezclar aleatoriamente los deportistas
+                    deportistas = deportistas.sort(() => Math.random() - 0.5);
+
                     // Redondeo del número de deportistas al tamaño de bracket más cercano (2, 4, 8, 16, etc.)
                     let size = 2;
                     while (size < num_deportistas) size *= 2;
