@@ -17,7 +17,7 @@ const categoriasRoutes = require('./routes/categoriasRoutes');
 app.use(deportistasRoutes);
 app.use(categoriasRoutes);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.MYSQLPORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en el puerto ${PORT}`);
 });

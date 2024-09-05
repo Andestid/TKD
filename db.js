@@ -6,10 +6,11 @@ let connection;
 
 try {
     connection = mysql.createConnection({
-        host: process.env.DBHOST,
-        user: process.env.DBUSER,
-        password: process.env.DBPASS,
-        database: process.env.DBNAME
+        host: process.env.MYSQLHOST,
+        user: process.env.MYSQLUSER,
+        password: process.env.MYSQL_ROOT_PASSWORD,
+        database: process.env.MYSQLDATABASE,
+        port: process.env.MYSQLPORT
     });
 } catch (error) {
     console.log("Error al conectar con la base de datos");
