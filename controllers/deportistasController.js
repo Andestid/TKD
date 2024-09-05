@@ -389,8 +389,17 @@ const generarBracketsParaTodasLasCategorias = (request, response) => {
                     const byes = size - num_deportistas;
 
                     // Insertar los byes de forma equitativa en la primera ronda
+                    function getRandomInt(min, max) {
+                        return Math.floor(Math.random() * (max - min)) + min;
+                    }
+                    
                     for (let i = 0; i < byes; i++) {
-                        const pos = (i * 2) % nextRoundParticipants.length; // Distribuir alternadamente
+                        let pos;
+                        // Asegurarse de que la posición elegida no tenga ya un bye
+                        do {
+                            pos = getRandomInt(0, nextRoundParticipants.length);
+                        } while (nextRoundParticipants[pos] === null);
+                    
                         nextRoundParticipants.splice(pos, 0, null); // Insertar un bye (null representa un bye)
                     }
 
@@ -927,10 +936,10 @@ const getTopFourPositionsForAllCategories = (request, response) => {
             });
         }
 
-        // Función para obtener el nombre de un deportista por su ID
+        // Función para obtener el nombre y apellido de un deportista por su ID
         const getDeportistaName = (id_deportista) => {
             return new Promise((resolve, reject) => {
-                connection.query('SELECT nombre FROM deportista WHERE id_deportista = ?', [id_deportista], (error, results) => {
+                connection.query('SELECT CONCAT(nombre, " ", apellido) AS nombre FROM deportista WHERE id_deportista = ?', [id_deportista], (error, results) => {
                     if (error) {
                         return reject(error);
                     }
@@ -1031,6 +1040,7 @@ const getTopFourPositionsForAllCategories = (request, response) => {
         processCategoryPositions();
     });
 };
+
 
 
 module.exports = {
